@@ -11,7 +11,7 @@ struct ltx_App_stu ltx_sys_app_list = {
  * @brief   设置周期任务名称函数
  * @param   task: 任务结构体指针
  * @param   name: 名称
- * @retval  非 0 代表设置成功
+ * @retval  非 0 代表设置失败
  */
 int ltx_Task_set_name(struct ltx_Task_stu *task, const char *name){
     if(name == NULL){
@@ -28,7 +28,7 @@ int ltx_Task_set_name(struct ltx_Task_stu *task, const char *name){
  * @param   task: 任务结构体指针
  * @param   ticks: 任务周期 tick 数
  * @param   execute_immediately: 是否立即执行，非 0 表示第一次执行不等待一个周期
- * @retval  非 0 代表设置成功
+ * @retval  非 0 代表设置失败
  */
 int ltx_Task_set_period(struct ltx_Task_stu *task, TickType_t ticks, uint8_t execute_immediately){
     if(task == NULL){
@@ -49,7 +49,7 @@ int ltx_Task_set_period(struct ltx_Task_stu *task, TickType_t ticks, uint8_t exe
  * @brief   设置周期任务回调函数
  * @param   task: 任务结构体指针
  * @param   callback_func: 任务回调函数指针
- * @retval  非 0 代表设置成功
+ * @retval  非 0 代表设置失败
  */
 int ltx_Task_set_callback(struct ltx_Task_stu *task, void (*callback_func)(void *param)){
     if(task == NULL){
@@ -69,7 +69,7 @@ int ltx_Task_set_callback(struct ltx_Task_stu *task, void (*callback_func)(void 
  * @brief   注册周期任务函数，默认暂停
  * @param   task: 任务结构体指针
  * @param   app: 任务所需添加到的应用的指针，为 NULL 则表示不归属任何 app，仅添加到 ltx，任务依然可以正常运行
- * @retval  非 0 代表成功
+ * @retval  非 0 代表失败
  */
 int ltx_Task_init(struct ltx_Task_stu *task, struct ltx_App_stu *app){
     if(task == NULL){

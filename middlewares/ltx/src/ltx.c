@@ -183,7 +183,7 @@ void ltx_Topic_unsubscribe(struct ltx_Topic_stu *topic, struct ltx_Topic_subscri
 }
 
 void ltx_Topic_publish(struct ltx_Topic_stu *topic){
-    topic->flag ++;
+    topic->flag = 1;
 
     /*
     struct ltx_Topic_subscriber_stu *pSub = topic->subscriber;
@@ -204,7 +204,7 @@ void ltx_Sys_tick_tack(void){
     struct ltx_Alarm_stu *pAlarm = ltx_sys_alarm_list.next;
     while(pAlarm != NULL){
         if(0 == --pAlarm->tick_count_down){
-            pAlarm->flag ++;
+            pAlarm->flag = 1;
         }
         pAlarm = pAlarm->next;
     }
