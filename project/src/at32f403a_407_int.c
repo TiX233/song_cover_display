@@ -30,7 +30,7 @@
 #include "wk_system.h"
 /* private includes ----------------------------------------------------------*/
 /* add user code begin private includes */
-
+#include "ltx.h"
 /* add user code end private includes */
 
 /* private typedef -----------------------------------------------------------*/
@@ -219,7 +219,7 @@ void SysTick_Handler(void)
   wk_timebase_handler();
 
   /* add user code begin SysTick_IRQ 1 */
-
+    ltx_Sys_tick_tack();
   /* add user code end SysTick_IRQ 1 */
 }
 

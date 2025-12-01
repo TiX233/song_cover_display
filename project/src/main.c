@@ -40,7 +40,10 @@
 
 /* private includes ----------------------------------------------------------*/
 /* add user code begin private includes */
+#include "ltx_log.h"
+#include "ltx_app.h"
 
+#include "myAPP_system.h"
 /* add user code end private includes */
 
 /* private typedef -----------------------------------------------------------*/
@@ -81,7 +84,8 @@
 int main(void)
 {
   /* add user code begin 1 */
-
+    ltx_Log_init();
+    LOG_STR("\n\nSYSTEM START\n\n");
   /* add user code end 1 */
 
   /* system clock config. */
@@ -134,6 +138,21 @@ int main(void)
   wk_usb_app_init();
 
   /* add user code begin 2 */
+    LOG_FMT(PRINT_LOG"MCU init over in %dms\n", ltx_Sys_get_tick());
+
+    // 创建系统基础 app 并设为运行态
+    LOG_STR(PRINT_DEBUG"Create system basic app\n");
+    ltx_App_init(&app_system);
+    ltx_App_resume(&app_system);
+
+    // 创建外部硬件初始化 app 并设为运行态
+    LOG_STR(PRINT_DEBUG"Create device init app\n");
+    // todo
+
+    LOG_STR(PRINT_LOG"System running...\n");
+
+    ltx_Sys_schedule_start(); // 开启调度器
+    ltx_Sys_scheduler(); // 运行调度器
 
   /* add user code end 2 */
 

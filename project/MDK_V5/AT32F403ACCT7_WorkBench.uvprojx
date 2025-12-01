@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>AT32F403ACCT7, USE_STDPERIPH_DRIVER, ARM_MATH_CM4, ARM_MATH_MATRIX_CHECK, ARM_MATH_ROUNDING, ARM_MATH_LOOPUNROLL, AT_START_F403A_V1</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\libraries\drivers\inc;..\..\libraries\cmsis\cm4\core_support;..\..\libraries\cmsis\cm4\device_support;..\inc;../../middlewares/usbd_drivers/inc;../../libraries/cmsis/dsp/include;../../libraries/cmsis/dsp/PrivateInclude</IncludePath>
+              <IncludePath>..\..\libraries\drivers\inc;..\..\libraries\cmsis\cm4\core_support;..\..\libraries\cmsis\cm4\device_support;..\inc;../../middlewares/usbd_drivers/inc;../../libraries/cmsis/dsp/include;../../libraries/cmsis/dsp/PrivateInclude;..\..\middlewares\ltx\inc;..\..\middlewares\ltx\components\app;..\..\middlewares\ltx\components\debug;..\..\middlewares\ltx\components\log;..\..\middlewares\ltx\components\script</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -448,6 +448,11 @@
               <FileName>wk_gpio.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\src\wk_gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>myAPP_system.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\myAPP_system.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -648,6 +653,51 @@
               <FileName>cdc_desc.c</FileName>
               <FileType>1</FileType>
               <FilePath>../src/cdc_desc.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>middlewares/ltx</GroupName>
+          <Files>
+            <File>
+              <FileName>ltx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\src\ltx.c</FilePath>
+            </File>
+            <File>
+              <FileName>ltx_cmd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\debug\ltx_cmd.c</FilePath>
+            </File>
+            <File>
+              <FileName>ltx_param.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\debug\ltx_param.c</FilePath>
+            </File>
+            <File>
+              <FileName>ltx_log.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\log\ltx_log.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\log\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\log\SEGGER_RTT_printf.c</FilePath>
+            </File>
+            <File>
+              <FileName>ltx_script.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\script\ltx_script.c</FilePath>
+            </File>
+            <File>
+              <FileName>ltx_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\app\ltx_app.c</FilePath>
             </File>
           </Files>
         </Group>
