@@ -40,6 +40,8 @@
 
 /* private includes ----------------------------------------------------------*/
 /* add user code begin private includes */
+#include "main.h"
+
 #include "ltx_log.h"
 #include "ltx_app.h"
 
@@ -63,6 +65,8 @@
 
 /* private variables ---------------------------------------------------------*/
 /* add user code begin private variables */
+SPI_HandleTypeDef spi1_handler;
+DMA_HandleTypeDef dma1ch1_handler;
 
 /* add user code end private variables */
 
@@ -108,7 +112,7 @@ int main(void)
 
   /* init adc1 function. */
   wk_adc1_init();
-
+#if 0
   /* init dma1 channel1 */
   wk_dma1_channel1_init();
   /* config dma channel transfer parameter */
@@ -121,7 +125,7 @@ int main(void)
 
   /* init spi1 function. */
   wk_spi1_init();
-
+#endif
   /* init tmr2 function. */
   wk_tmr2_init();
 
@@ -138,6 +142,9 @@ int main(void)
   wk_usb_app_init();
 
   /* add user code begin 2 */
+
+
+
     LOG_FMT(PRINT_LOG"MCU init over in %dms\n", ltx_Sys_get_tick());
 
     // 创建系统基础 app 并设为运行态
@@ -167,5 +174,36 @@ int main(void)
 }
 
   /* add user code begin 4 */
+
+void my_SPI_init(void){
+    spi1_handler.Instance               = (SPI_TypeDef *)SPI1;                       /* SPI1 */
+    spi1_handler.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;    /* prescaler :2 */
+    spi1_handler.Init.Direction         = SPI_DIRECTION_1LINE;
+    spi1_handler.Init.CLKPolarity       = SPI_POLARITY_LOW;           /* SPI Clock Polarity: low */
+    spi1_handler.Init.CLKPhase          = SPI_PHASE_1EDGE;            /* Data sampling starts at the first clock edge */
+    spi1_handler.Init.DataSize          = SPI_DATASIZE_8BIT;          /* SPI Data Size is 8 bit */
+    spi1_handler.Init.FirstBit          = SPI_FIRSTBIT_MSB;           /* SPI MSB Transmission */
+    spi1_handler.Init.NSS               = SPI_NSS_SOFT;               /* NSS Hardware mode */
+    spi1_handler.Init.Mode = SPI_MODE_MASTER;                         /* Configure as host */
+    spi1_handler.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;    /* The CRC check is disabled */
+    /* spi1_handler.Init.CRCPolynomial = 1; */                        /* CRC polynomial value */
+    if (HAL_SPI_DeInit(&spi1_handler) != HAL_OK)
+    {
+        while(1){
+            LOG_STR(PRINT_ERROR"SPI Deinit Failed!\n");
+            wk_delay_ms(1000);
+        }
+    }
+    
+    /* Initialize SPI peripheral */
+    if (HAL_SPI_Init(&spi1_handler) != HAL_OK)
+    {
+        while(1){
+            LOG_STR(PRINT_ERROR"SPI Init Failed!\n");
+            wk_delay_ms(1000);
+        }
+    }
+  
+}
 
   /* add user code end 4 */

@@ -31,6 +31,8 @@
 /* private includes ----------------------------------------------------------*/
 /* add user code begin private includes */
 #include "ltx.h"
+#include "ltx_log.h"
+#include "main.h"
 /* add user code end private includes */
 
 /* private typedef -----------------------------------------------------------*/
@@ -92,7 +94,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* add user code begin HardFault_IRQ 0 */
-
+    LOG_STR("\n\n!HF!\n\n");
   /* add user code end HardFault_IRQ 0 */
   /* go to infinite loop when hard fault exception occurs */
   while (1)
@@ -130,7 +132,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* add user code begin BusFault_IRQ 0 */
-
+    LOG_STR("\n\n!BF!\n\n");
   /* add user code end BusFault_IRQ 0 */
   /* go to infinite loop when bus fault exception occurs */
   while (1)
@@ -149,7 +151,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* add user code begin UsageFault_IRQ 0 */
-
+    LOG_STR("\n\n!UF!\n\n");
   /* add user code end UsageFault_IRQ 0 */
   /* go to infinite loop when usage fault exception occurs */
   while (1)
@@ -219,6 +221,7 @@ void SysTick_Handler(void)
   wk_timebase_handler();
 
   /* add user code begin SysTick_IRQ 1 */
+    HAL_IncTick();
     ltx_Sys_tick_tack();
   /* add user code end SysTick_IRQ 1 */
 }
@@ -231,7 +234,10 @@ void SysTick_Handler(void)
 void DMA1_Channel1_IRQHandler(void)
 {
   /* add user code begin DMA1_Channel1_IRQ 0 */
+    
+    HAL_DMA_IRQHandler(spi1_handler.hdmatx);
 
+#if 0
   /* add user code end DMA1_Channel1_IRQ 0 */
 
   if(dma_interrupt_flag_get(DMA1_FDT1_FLAG) != RESET)
@@ -243,7 +249,7 @@ void DMA1_Channel1_IRQHandler(void)
   }
 
   /* add user code begin DMA1_Channel1_IRQ 1 */
-
+#endif
   /* add user code end DMA1_Channel1_IRQ 1 */
 }
 
@@ -290,5 +296,10 @@ void USBFS_MAPL_IRQHandler(void)
 }
 
 /* add user code begin 1 */
+
+void SPI1_IRQHandler(void)
+{
+    HAL_SPI_IRQHandler(&spi1_handler);
+}
 
 /* add user code end 1 */

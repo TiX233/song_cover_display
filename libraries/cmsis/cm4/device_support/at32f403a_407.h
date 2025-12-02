@@ -402,7 +402,7 @@ typedef __I uint8_t  vuc8;    /*!< read only */
 /**
   * @brief flag status
   */
-typedef enum {RESET = 0, SET = !RESET} flag_status;
+typedef enum {RESET = 0, SET = !RESET} flag_status, FlagStatus, ITStatus;
 
 /**
   * @brief confirm state
