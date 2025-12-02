@@ -148,6 +148,15 @@ Reset_Handler   PROC
                 EXPORT  Reset_Handler                       [WEAK]
                 IMPORT  __main
                 IMPORT  SystemInit
+
+                IMPORT  Extend_SRAM
+                MOV32   R0, #0x20001000
+                MOV     SP, R0
+                LDR     R0, =Extend_SRAM
+                BLX     R0
+                MOV32   R0, #0x08000000
+                LDR     SP, [R0]
+
                 LDR     R0, =SystemInit
                 BLX     R0
                 LDR     R0, =__main

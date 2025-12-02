@@ -206,4 +206,18 @@ void my_SPI_init(void){
   
 }
 
+// 扩展内存
+void Extend_SRAM(void){
+    // check if RAM has been set to 224K, if not, change EOPB0
+    if(((USD->eopb0) & 0xFF) != 0xFE){
+        /* Unlock Option Bytes Program Erase controller */
+        flash_unlock();
+        /* Erase Option Bytes */
+        flash_user_system_data_erase();
+        /* Change SRAM size to 224KB */
+        flash_user_system_data_program((uint32_t)&USD->eopb0,0xFE);
+        NVIC_SystemReset();
+    }
+}
+
   /* add user code end 4 */
