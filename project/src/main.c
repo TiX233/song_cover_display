@@ -46,6 +46,7 @@
 #include "ltx_app.h"
 
 #include "myAPP_system.h"
+#include "myAPP_device_init.h"
 /* add user code end private includes */
 
 /* private typedef -----------------------------------------------------------*/
@@ -72,7 +73,7 @@ DMA_HandleTypeDef dma1ch1_handler;
 
 /* private function prototypes --------------------------------------------*/
 /* add user code begin function prototypes */
-
+void my_SPI_init(void);
 /* add user code end function prototypes */
 
 /* private user code ---------------------------------------------------------*/
@@ -143,7 +144,7 @@ int main(void)
 
   /* add user code begin 2 */
 
-
+    my_SPI_init();
 
     LOG_FMT(PRINT_LOG"MCU init over in %dms\n", ltx_Sys_get_tick());
 
@@ -154,7 +155,8 @@ int main(void)
 
     // 创建外部硬件初始化 app 并设为运行态
     LOG_STR(PRINT_DEBUG"Create device init app\n");
-    // todo
+    ltx_App_init(&app_device_init);
+    ltx_App_resume(&app_device_init);
 
     LOG_STR(PRINT_LOG"System running...\n");
 
@@ -189,19 +191,15 @@ void my_SPI_init(void){
     /* spi1_handler.Init.CRCPolynomial = 1; */                        /* CRC polynomial value */
     if (HAL_SPI_DeInit(&spi1_handler) != HAL_OK)
     {
-        while(1){
-            LOG_STR(PRINT_ERROR"SPI Deinit Failed!\n");
-            wk_delay_ms(1000);
-        }
+        _SYS_ERROR(SYS_ERROR_SPI | SYS_ERROR_SPI_DEINIT, "SPI Deinit Failed!");
+        return ;
     }
     
     /* Initialize SPI peripheral */
     if (HAL_SPI_Init(&spi1_handler) != HAL_OK)
     {
-        while(1){
-            LOG_STR(PRINT_ERROR"SPI Init Failed!\n");
-            wk_delay_ms(1000);
-        }
+        _SYS_ERROR(SYS_ERROR_SPI | SYS_ERROR_SPI_INIT, "SPI Init Failed!");
+        return ;
     }
   
 }

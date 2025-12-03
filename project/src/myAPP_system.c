@@ -4,9 +4,11 @@
 #include "ltx_param.h"
 #include "ltx_log.h"
 #include "ltx_cmd.h"
+#include "GC9A01.h"
 
 void task_func_heart_beat(void *param);
 void task_func_cmd(void *param);
+void subscriber_cb_sys_error(void *param);
 
 
 // 心拍周期任务对象
@@ -15,6 +17,29 @@ struct ltx_Task_stu task_heart_beat;
 // 命令处理周期任务对象
 struct ltx_Task_stu task_cmd;
 
+
+// 系统错误码
+uint32_t SYS_ERROR_CODE = 0;
+const char *SYS_ERROR_MSG = "Okay";
+
+// 系统错误话题
+struct ltx_Topic_stu topic_sys_error = {
+    .flag = 0,
+
+    .subscriber = NULL,
+
+    .next = NULL,
+};
+
+// 系统错误话题订阅者
+struct ltx_Topic_subscriber_stu subscriber_sys_error = {
+    .callback_func = subscriber_cb_sys_error,
+    
+    .next = NULL,
+};
+
+// 错误码周期打印任务
+struct ltx_Task_stu task_error_code;
 
 int myApp_system_init(struct ltx_App_stu *app){
     // 创建心拍周期任务
@@ -28,6 +53,11 @@ int myApp_system_init(struct ltx_App_stu *app){
     ltx_Task_set_period(&task_cmd, 200, 0);
     ltx_Task_set_callback(&task_cmd, task_func_cmd);
     ltx_Task_init(&task_cmd, app);
+
+    // 添加错误事件话题
+    ltx_Topic_add(&topic_sys_error);
+    // 订阅话题
+    ltx_Topic_subscribe(&topic_sys_error, &subscriber_sys_error);
 
     return 0;
 }
@@ -97,4 +127,41 @@ void task_func_cmd(void *param){
             ltx_Cmd_process((char *)cmd_buffer); // 处理命令
         }
     }
+}
+
+// 系统错误码每秒打印周期任务
+void task_func_error_code(void *param){
+
+    LOG_FMT("Error: 0x%08x, %s\n", SYS_ERROR_CODE, SYS_ERROR_MSG);
+}
+
+// 系统错误订阅回调
+void subscriber_cb_sys_error(void *param){
+    // 系统发生错误
+    // 创建一个不断打印错误码的线程
+    ltx_Task_set_name(&task_error_code, "error_code");
+    ltx_Task_set_period(&task_error_code, 1000, 1);
+    ltx_Task_set_callback(&task_error_code, task_func_error_code);
+    ltx_Task_init(&task_error_code, &app_system);
+
+    // 运行
+    ltx_Task_resume(&task_error_code);
+
+    // 关闭其他 app
+    // todo
+
+    // 蓝屏显示错误码
+    extern struct gc9a01_stu myLCD;
+    if(myLCD.is_initialized){
+        gc9a01_clear(&myLCD, RGB565_BLUE);
+        // todo
+    }
+}
+
+// 发布系统错误 api
+void _SYS_ERROR(uint32_t code, const char *msg){
+    SYS_ERROR_CODE = code;
+    SYS_ERROR_MSG = msg;
+
+    ltx_Topic_publish(&topic_sys_error);
 }

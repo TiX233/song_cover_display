@@ -33,6 +33,8 @@
 #include "main.h"
 #include "ltx_log.h"
 
+#include "myAPP_system.h"
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -87,10 +89,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         dma1ch1_handler.Init.Priority = DMA_PRIORITY_VERY_HIGH;
         /* Initialize DMA */
         if(HAL_DMA_Init(&dma1ch1_handler) != HAL_OK){
-            while(1){
-                LOG_STR(PRINT_ERROR"DMA1 CH1 init Failed!\n");
-                HAL_Delay(1000);
-            }
+            _SYS_ERROR(SYS_ERROR_DMA | SYS_ERROR_DMA_INIT, "Dma init Failed!");
+
+            return ;
         }
         /* DMA handle is associated with SPI handle */
         __HAL_LINKDMA(hspi, hdmatx, dma1ch1_handler);

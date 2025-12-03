@@ -5,6 +5,7 @@
 #include "ltx_app.h"
 #include "myAPP_system.h"
 #include "ltx_log.h"
+#include "GC9A01.h"
 
 typedef struct {
     const char *cmd_name;
@@ -20,6 +21,9 @@ void cmd_cb_alarm(uint8_t argc, char *argv[]);
 void cmd_cb_reboot(uint8_t argc, char *argv[]);
 void cmd_cb_param(uint8_t argc, char *argv[]);
 void cmd_cb_ltx_app(uint8_t argc, char *argv[]);
+
+void cmd_cb_lcd_bl(uint8_t argc, char *argv[]);
+void cmd_cb_lcd_clear(uint8_t argc, char *argv[]);
 
 ltx_Cmd_item cmd_list[] = {
     {
@@ -66,6 +70,18 @@ ltx_Cmd_item cmd_list[] = {
         .cmd_name = "ltx_app",
         .brief = "manage ltx apps",
         .cmd_cb = cmd_cb_ltx_app,
+    },
+
+    {
+        .cmd_name = "lcd_bl",
+        .brief = "set lcd backlight",
+        .cmd_cb = cmd_cb_lcd_bl,
+    },
+
+    {
+        .cmd_name = "lcd_clear",
+        .brief = "set lcd to one color",
+        .cmd_cb = cmd_cb_lcd_clear,
     },
     
 
@@ -553,4 +569,41 @@ void ltx_Cmd_process(char *cmd){
     LOG_FMT(PRINT_LOG"Type /help to list all commands\n");
 }
 
+
+extern struct gc9a01_stu myLCD;
+// 设置 lcd 背光命令
+void cmd_cb_lcd_bl(uint8_t argc, char *argv[]){
+    if(argc < 2){
+        goto Useage_lcd_bl;
+    }
+    uint8_t bl;
+
+    sscanf(argv[1], "%d", &bl);
+
+    myLCD.set_backlight(bl);
+
+    return ;
+
+Useage_lcd_bl:
+    LOG_FMT(PRINT_LOG"Useage: %s <brightness(0~100)>\n", argv[0]);
+}
+
+// 设置 lcd 屏幕为某一颜色
+void cmd_cb_lcd_clear(uint8_t argc, char *argv[]){
+    if(argc < 2){
+        goto Useage_lcd_clear;
+    }
+
+    uint16_t color;
+    sscanf(argv[1], "%hx", &color);
+
+    LOG_FMT(PRINT_LOG"Set LCD color to 0x%04x\n", color);
+
+    gc9a01_clear(&myLCD, color);
+
+    return ;
+
+Useage_lcd_clear:
+    LOG_FMT(PRINT_LOG"Useage: %s <RGB565 color(e.g 0x1234)>\n", argv[0]);
+}
 

@@ -159,12 +159,15 @@ int ltx_App_init(struct ltx_App_stu *app){
 
     // 执行用户自定义内容
     if(app->init != NULL){
-        app->init(app);
+        if(app->init(app)){
+            return -9;
+        }
     }else {
         return -3;
     }
 
     // 添加到管理链表
+    // ? 怎么这样写的
     if(app->next != NULL){ // 已经在列表中
         goto ltx_App_init_over;
     }

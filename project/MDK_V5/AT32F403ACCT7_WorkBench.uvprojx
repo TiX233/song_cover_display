@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>AT32F403ACCT7, USE_STDPERIPH_DRIVER, ARM_MATH_CM4, ARM_MATH_MATRIX_CHECK, ARM_MATH_ROUNDING, ARM_MATH_LOOPUNROLL, AT_START_F403A_V1, PY32F403xD</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\libraries\drivers\inc;..\..\libraries\cmsis\cm4\core_support;..\..\libraries\cmsis\cm4\device_support;..\inc;../../middlewares/usbd_drivers/inc;../../libraries/cmsis/dsp/include;../../libraries/cmsis/dsp/PrivateInclude;..\..\middlewares\ltx\inc;..\..\middlewares\ltx\components\app;..\..\middlewares\ltx\components\debug;..\..\middlewares\ltx\components\log;..\..\middlewares\ltx\components\script;..\..\libraries\drivers\HAL\inc</IncludePath>
+              <IncludePath>..\..\libraries\drivers\inc;..\..\libraries\cmsis\cm4\core_support;..\..\libraries\cmsis\cm4\device_support;..\inc;../../middlewares/usbd_drivers/inc;../../libraries/cmsis/dsp/include;../../libraries/cmsis/dsp/PrivateInclude;..\..\middlewares\ltx\inc;..\..\middlewares\ltx\components\app;..\..\middlewares\ltx\components\debug;..\..\middlewares\ltx\components\log;..\..\middlewares\ltx\components\script;..\..\libraries\drivers\HAL\inc;..\..\devices\inc;..\..\middlewares\ltx\components\event_group</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -458,6 +458,11 @@
               <FileName>py32f4xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\src\py32f4xx_hal_msp.c</FilePath>
+            </File>
+            <File>
+              <FileName>myAPP_device_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\myAPP_device_init.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -704,6 +709,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\middlewares\ltx\components\app\ltx_app.c</FilePath>
             </File>
+            <File>
+              <FileName>ltx_event_group.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\middlewares\ltx\components\event_group\ltx_event_group.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -738,6 +748,16 @@
               <FileName>system_py32f4xx.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\libraries\drivers\HAL\src\system_py32f4xx.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>devices</GroupName>
+          <Files>
+            <File>
+              <FileName>GC9A01.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\devices\GC9A01.c</FilePath>
             </File>
           </Files>
         </Group>

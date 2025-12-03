@@ -11,7 +11,7 @@ void param_read_heart_beat(struct param_stu *param){
 void param_write_heart_beat(struct param_stu *param, const char *new_val){
     uint16_t new_Hz;
 
-    sscanf(new_val, "%d", &new_Hz);
+    sscanf(new_val, "%hd", &new_Hz);
 
     if(new_Hz > 1000 || new_Hz < 1){
         LOG_FMT(PRINT_WARNNING"New value(%d) not in range(1~1000)!\n", new_Hz);
