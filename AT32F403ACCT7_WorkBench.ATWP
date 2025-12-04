@@ -13,19 +13,6 @@
             <ModeSub name="ACC_State" value="TRUE"/>
         </Mode>
     </ACC>
-    <ADC1>
-        <Mode>
-            <ModeSub name="IN1" value="TRUE"/>
-        </Mode>
-        <Parameters>
-            <ParametersSub name="OrdinaryTriggerSource" value="ADC12_ORDINARY_TRIG_SOFTWARE"/>
-            <ParametersSub name="Channel_OrdinarySequence_1" value="ADC_CHANNEL_1"/>
-            <ParametersSub name="SamplingRate_OrdinarySequence_1" value="1.190"/>
-        </Parameters>
-        <Interrupts>
-            <InterruptsSub name="Interrupt_CCE" value="TRUE"/>
-        </Interrupts>
-    </ADC1>
     <DEBUG>
         <Mode>
             <ModeSub name="Debug interface" value="SWD"/>
@@ -104,7 +91,6 @@
         <FLASH_IRQHandler>0;0;0;0;0</FLASH_IRQHandler>
         <CRM_IRQHandler>0;0;0;0;0</CRM_IRQHandler>
         <DMA1_Channel1_IRQHandler>1;0;0;0;0</DMA1_Channel1_IRQHandler>
-        <ADC1_2_IRQHandler>1;0;0;0;0</ADC1_2_IRQHandler>
         <TMR2_GLOBAL_IRQHandler>0;0;0;0;0</TMR2_GLOBAL_IRQHandler>
         <TMR3_GLOBAL_IRQHandler>0;0;0;0;0</TMR3_GLOBAL_IRQHandler>
         <SPI1_IRQHandler>0;0;0;0;0</SPI1_IRQHandler>
@@ -133,7 +119,7 @@
         <systicsel>8</systicsel>
     </ClockConfiguration>
     <PINInfo>
-        <PinSub pinname="PA1" signalname="ADC1_IN1" signaltype="2"/>
+        <PinSub pinname="PA1" signalname="GPIO_Input" signaltype="3"/>
         <PinSub pinname="PA2" signalname="TMR2_CH3" signaltype="3"/>
         <PinSub pinname="PA3" signalname="TMR2_CH4" signaltype="3"/>
         <PinSub pinname="PA4" signalname="GPIO_Output" signaltype="3"/>

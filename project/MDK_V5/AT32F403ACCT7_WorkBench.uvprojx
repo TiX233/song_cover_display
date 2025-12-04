@@ -415,11 +415,6 @@
               <FilePath>..\src\wk_acc.c</FilePath>
             </File>
             <File>
-              <FileName>wk_adc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\src\wk_adc.c</FilePath>
-            </File>
-            <File>
               <FileName>wk_debug.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\src\wk_debug.c</FilePath>
@@ -488,11 +483,6 @@
               <FileName>at32f403a_407_pwc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\libraries\drivers\src\at32f403a_407_pwc.c</FilePath>
-            </File>
-            <File>
-              <FileName>at32f403a_407_adc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\libraries\drivers\src\at32f403a_407_adc.c</FilePath>
             </File>
             <File>
               <FileName>at32f403a_407_spi.c</FileName>
@@ -652,21 +642,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>usbd_class</GroupName>
-          <Files>
-            <File>
-              <FileName>cdc_class.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../src/cdc_class.c</FilePath>
-            </File>
-            <File>
-              <FileName>cdc_desc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../src/cdc_desc.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>middlewares/ltx</GroupName>
           <Files>
             <File>
@@ -758,6 +733,21 @@
               <FileName>GC9A01.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\devices\GC9A01.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>usbd_class</GroupName>
+          <Files>
+            <File>
+              <FileName>cdc_class.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../src/cdc_class.c</FilePath>
+            </File>
+            <File>
+              <FileName>cdc_desc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../src/cdc_desc.c</FilePath>
             </File>
           </Files>
         </Group>

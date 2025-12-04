@@ -49,6 +49,12 @@ void wk_gpio_config(void)
 
   /* add user code end gpio_config 1 */
 
+  /* gpio input config */
+  gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
+  gpio_init_struct.gpio_pins = GPIO_PINS_1;
+  gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+  gpio_init(GPIOA, &gpio_init_struct);
+
   /* gpio output config */
   gpio_bits_reset(GPIOA, GPIO_PINS_4 | GPIO_PINS_6);
   gpio_bits_reset(GPIOB, GPIO_PINS_0);

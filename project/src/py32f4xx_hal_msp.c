@@ -33,7 +33,7 @@
 #include "main.h"
 #include "ltx_log.h"
 
-#include "myAPP_system.h"
+// #include "myAPP_system.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -42,6 +42,7 @@
 /* Private function prototypes -----------------------------------------------*/
 /* External functions --------------------------------------------------------*/
 
+void _SYS_ERROR(uint32_t code, const char *msg);
 void my_SPI_io_init(void);
 
 /**
@@ -89,7 +90,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         dma1ch1_handler.Init.Priority = DMA_PRIORITY_VERY_HIGH;
         /* Initialize DMA */
         if(HAL_DMA_Init(&dma1ch1_handler) != HAL_OK){
-            _SYS_ERROR(SYS_ERROR_DMA | SYS_ERROR_DMA_INIT, "Dma init Failed!");
+            _SYS_ERROR(0x0201, "Dma init Failed!");
 
             return ;
         }

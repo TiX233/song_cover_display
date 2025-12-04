@@ -254,30 +254,6 @@ void DMA1_Channel1_IRQHandler(void)
 }
 
 /**
-  * @brief  this function handles ADC1 & ADC2 handler.
-  * @param  none
-  * @retval none
-  */
-void ADC1_2_IRQHandler(void)
-{
-  /* add user code begin ADC1_2_IRQ 0 */
-
-  /* add user code end ADC1_2_IRQ 0 */
-
-  if(adc_interrupt_flag_get(ADC1, ADC_CCE_FLAG) != RESET)
-  {
-    /* add user code begin ADC1_ADC_CCE_FLAG */
-    /* clear flag */
-    adc_flag_clear(ADC1, ADC_CCE_FLAG);
-    /* add user code end ADC1_ADC_CCE_FLAG */ 
-  }
-
-  /* add user code begin ADC1_2_IRQ 1 */
-
-  /* add user code end ADC1_2_IRQ 1 */
-}
-
-/**
   * @brief  this function handles USB Map Low handler.
   * @param  none
   * @retval none
