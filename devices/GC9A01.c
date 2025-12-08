@@ -153,12 +153,6 @@ void gc9a01_write_data(struct gc9a01_stu *lcd, const uint8_t *data, uint16_t len
 }
 
 uint8_t gc9a01_write_data_dma(struct gc9a01_stu *lcd, const uint8_t *data, uint16_t len){
-    if(lcd->flag_dma_lock){
-        return 1;
-    }
-    lcd->flag_dma_lock = 1;
-
-    lcd->before_dma_trans();
 
     lcd->write_dc(GC9A01_PIN_LEVEL_DC_DATA);
     lcd->transmit_data_dma(data, len);

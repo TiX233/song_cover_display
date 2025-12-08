@@ -58,6 +58,17 @@ typedef struct{
     const uint8_t *data_buf;
 } lcd_init_seq_stu;
 
+struct rgb_565_stu {
+    union {
+        uint16_t rgb;
+        struct {
+            uint16_t r:5;
+            uint16_t g:6;
+            uint16_t b:5;
+        } one;
+    } color;
+};
+
 struct gc9a01_stu {
     uint8_t is_initialized;
     uint8_t flag_dma_lock;

@@ -109,17 +109,25 @@ int main(void)
 
   /* init gpio function. */
   wk_gpio_config();
-#if 0
+#if 1
   /* init dma1 channel1 */
   wk_dma1_channel1_init();
   /* config dma channel transfer parameter */
   /* user need to modify define values DMAx_CHANNELy_XXX_BASE_ADDR and DMAx_CHANNELy_BUFFER_SIZE in at32xxx_wk_config.h */
+#endif
+
+#if 0
   wk_dma_channel_config(DMA1_CHANNEL1, 
                         (uint32_t)&SPI1->dt, 
                         DMA1_CHANNEL1_MEMORY_BASE_ADDR, 
                         DMA1_CHANNEL1_BUFFER_SIZE);
-  dma_channel_enable(DMA1_CHANNEL1, TRUE);
+#endif
 
+#if 0
+  dma_channel_enable(DMA1_CHANNEL1, TRUE);
+#endif
+
+#if 0
   /* init spi1 function. */
   wk_spi1_init();
 #endif
@@ -159,6 +167,8 @@ int main(void)
     ltx_Sys_schedule_start(); // 开启调度器
     ltx_Sys_scheduler(); // 运行调度器
 
+    while(1){
+#if 0
   /* add user code end 2 */
 
   while(1)
@@ -166,7 +176,7 @@ int main(void)
      wk_usb_app_task();
 
     /* add user code begin 3 */
-
+#endif
     /* add user code end 3 */
   }
 }

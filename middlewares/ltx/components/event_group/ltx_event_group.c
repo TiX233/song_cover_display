@@ -54,10 +54,16 @@ int ltx_Event_init(struct ltx_Event_stu *event, void (*callback)(struct ltx_Even
         return -2;
     }
 
-    ltx_Alarm_remove(&(event->alarm));
     event->alarm.flag = 0;
-    event->alarm.next = NULL;
     event->alarm.callback_alarm = _ltx_Event_alarm_cb;
+    event->alarm.next = NULL;
+
+    event->topic.flag = 0;
+    event->topic.subscriber = NULL;
+    event->topic.next = NULL;
+    
+    event->subscriber.callback_func = _ltx_Event_subscriber_cb;
+    event->subscriber.next = NULL;
 
     ltx_Alarm_set_count(&(event->alarm), time_out);
     ltx_Alarm_add(&(event->alarm));

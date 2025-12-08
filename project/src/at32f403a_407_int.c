@@ -234,7 +234,7 @@ void SysTick_Handler(void)
 void DMA1_Channel1_IRQHandler(void)
 {
   /* add user code begin DMA1_Channel1_IRQ 0 */
-    
+    // LOG_STR("d\n");
     HAL_DMA_IRQHandler(spi1_handler.hdmatx);
 
 #if 0

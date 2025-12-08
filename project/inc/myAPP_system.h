@@ -12,7 +12,8 @@
     #define SYS_ERROR_DMA_TX        0x02
 #define SYS_ERROR_LCD                   0x0400
     #define SYS_ERROR_LCD_INIT      0x01
-#define SYS_ERROR_ADC                   0x0800
+#define SYS_ERROR_TONEARM               0x0800
+    #define SYS_ERROR_TONEARM_INIT  0x01
 #define SYS_ERROR_PWM                   0x1000
 #define SYS_ERROR_USB                   0x2000
 

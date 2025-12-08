@@ -6,6 +6,8 @@
 #include "myAPP_system.h"
 #include "ltx_log.h"
 #include "GC9A01.h"
+#include "tonearm.h"
+#include "myAPP_device_init.h"
 
 typedef struct {
     const char *cmd_name;
@@ -24,6 +26,11 @@ void cmd_cb_ltx_app(uint8_t argc, char *argv[]);
 
 void cmd_cb_lcd_bl(uint8_t argc, char *argv[]);
 void cmd_cb_lcd_clear(uint8_t argc, char *argv[]);
+
+void cmd_cb_tonearm_get(uint8_t argc, char *argv[]);
+void cmd_cb_tonearm_set(uint8_t argc, char *argv[]);
+
+void cmd_cb_pic_down(uint8_t argc, char *argv[]);
 
 ltx_Cmd_item cmd_list[] = {
     {
@@ -84,6 +91,25 @@ ltx_Cmd_item cmd_list[] = {
         .cmd_cb = cmd_cb_lcd_clear,
     },
     
+
+    {
+        .cmd_name = "tonearm_get",
+        .brief = "get tonearm stylus status",
+        .cmd_cb = cmd_cb_tonearm_get,
+    },
+
+    {
+        .cmd_name = "tonearm_set",
+        .brief = "set tonearm pwm duty",
+        .cmd_cb = cmd_cb_tonearm_set,
+    },
+
+
+    {
+        .cmd_name = "pic_down",
+        .brief = "debug pic down anim",
+        .cmd_cb = cmd_cb_pic_down,
+    },
 
 
     // end of list:
@@ -189,8 +215,7 @@ Useage_alarm:
 }
 
 void cmd_cb_reboot(uint8_t argc, char *argv[]){
-    // HAL_NVIC_SystemReset();
-	LOG_STR(PRINT_ERROR"TODO\n");
+    NVIC_SystemReset();
 }
 
 void cmd_cb_ltx_app(uint8_t argc, char *argv[]){
@@ -599,7 +624,14 @@ void cmd_cb_lcd_clear(uint8_t argc, char *argv[]){
 
     LOG_FMT(PRINT_LOG"Set LCD color to 0x%04x\n", color);
 
-    gc9a01_clear(&myLCD, color);
+    // gc9a01_clear(&myLCD, color);
+    uint8_t _color[2];
+    _color[1] = color & 0xFF;
+    _color[0] = color >> 8;
+    gc9a01_set_window(&myLCD, 0, 0, 239, 239);
+    myLCD.write_dc(GC9A01_PIN_LEVEL_DC_DATA);
+    for(uint32_t i = 0; i < 240*240; i ++)
+        myLCD.transmit_data(_color, 2);
 
     return ;
 
@@ -607,3 +639,58 @@ Useage_lcd_clear:
     LOG_FMT(PRINT_LOG"Useage: %s <RGB565 color(e.g 0x1234)>\n", argv[0]);
 }
 
+
+// 获得唱针位置
+void cmd_cb_tonearm_get(uint8_t argc, char *argv[]){
+    tonearm_detect(&myTonearm);
+    LOG_FMT(PRINT_LOG"Stylus: %d\n", tonearm_get_status(&myTonearm));
+}
+
+// 设置唱臂输出
+void cmd_cb_tonearm_set(uint8_t argc, char *argv[]){
+    if(argv[0][0] != '#'){
+        LOG_STR(PRINT_WARNNING"PERMISSION DENIED!\n");
+        return ;
+    }
+
+    if(argc < 3){
+        goto Useage_tonearm_set;
+    }
+
+    uint8_t duty;
+    sscanf(argv[2], "%d", &duty);
+
+    switch(argv[1][0]){
+        case 'c':
+            LOG_FMT(PRINT_LOG"Set tonearm to close %d\n", duty);
+            tonearm_close(&myTonearm, duty);
+            break;
+
+        case 'l':
+            LOG_FMT(PRINT_LOG"Set tonearm to leave %d\n", duty);
+            tonearm_leave(&myTonearm, duty);
+            break;
+
+        default:
+            LOG_FMT(PRINT_WARNNING"Unknown option: %s\n", argv[1]);
+
+            goto Useage_tonearm_set;
+            break;
+    }
+
+    return ;
+
+Useage_tonearm_set:
+    LOG_FMT(PRINT_LOG"Useage: %s <close/leave> <duty(0~100)>\n", argv[0]);
+}
+
+
+void disp_pic_down(void);
+
+void cmd_cb_pic_down(uint8_t argc, char *argv[]){
+
+    LOG_STR(PRINT_LOG"Display pic down\n");
+
+    disp_pic_down();
+
+}

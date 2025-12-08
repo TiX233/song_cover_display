@@ -62,17 +62,21 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
     /* Initialize SPI1 */
     if (hspi->Instance == SPI1)
     {
+        #if 0
         __HAL_RCC_SYSCFG_CLK_ENABLE();                  /* Enable SYSCFG clock */
         __HAL_RCC_SPI1_CLK_ENABLE();                    /* Enable SPI1 clock */
         __HAL_RCC_DMA1_CLK_ENABLE();                    /* Enable DMA clock */
+        #endif
 
         my_SPI_io_init();
 
         /* Interrupt configuration */
-        HAL_NVIC_SetPriority(SPI1_IRQn, 1, 0);
-        HAL_NVIC_EnableIRQ(SPI1_IRQn);
+        // HAL_NVIC_SetPriority(SPI1_IRQn, 1, 0);
+        // HAL_NVIC_EnableIRQ(SPI1_IRQn);
         /* DMA_CH1 configuration */
         dma1ch1_handler.Instance = DMA1_Channel1;
+        dma1ch1_handler.ChannelIndex = 0;
+        dma1ch1_handler.DmaBaseAddress = DMA1;
         dma1ch1_handler.Init.Direction = DMA_MEMORY_TO_PERIPH;
         dma1ch1_handler.Init.PeriphInc = DMA_PINC_DISABLE;
         dma1ch1_handler.Init.MemInc = DMA_MINC_ENABLE;
@@ -88,21 +92,27 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         }
         dma1ch1_handler.Init.Mode = DMA_NORMAL;
         dma1ch1_handler.Init.Priority = DMA_PRIORITY_VERY_HIGH;
-        /* Initialize DMA */
+
+        dma1ch1_handler.ErrorCode = 0;
+        dma1ch1_handler.State = 0x01;
+        dma1ch1_handler.Lock = HAL_UNLOCKED;
+        #if 0
         if(HAL_DMA_Init(&dma1ch1_handler) != HAL_OK){
+            LOG_STR(PRINT_ERROR"Dma init Failed!\n");
             _SYS_ERROR(0x0201, "Dma init Failed!");
 
             return ;
         }
+        #endif
         /* DMA handle is associated with SPI handle */
         __HAL_LINKDMA(hspi, hdmatx, dma1ch1_handler);
 
         /* Set DMA channel map. */
-        HAL_DMA_ChannelMap(&dma1ch1_handler, DMA_CHANNEL_MAP_SPI1_WR); /* SPI1_TX DMA1_CH1 */
+        // HAL_DMA_ChannelMap(&dma1ch1_handler, DMA_CHANNEL_MAP_SPI1_WR); /* SPI1_TX DMA1_CH1 */
 
         /* DMA interrupt configuration*/
-        HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0);
-        HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+        // HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0);
+        // HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     }
 }
 
@@ -119,6 +129,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
  */
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
 {
+    #if 0
     if (hspi->Instance == SPI1)
     {
         /* Reset SPI peripheral */
@@ -133,6 +144,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
         HAL_DMA_DeInit(&dma1ch1_handler);
         HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);
     }
+    #endif
 }
 
 /************************ (C) COPYRIGHT Puya *****END OF FILE******************/

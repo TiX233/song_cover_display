@@ -48,6 +48,8 @@ void my_SPI_io_init(void){
     gpio_init_struct.gpio_pins = GPIO_PINS_7;
     gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
     gpio_init(GPIOA, &gpio_init_struct);
+
+    spi_i2s_dma_transmitter_enable(SPI1, TRUE);
 }
 
 /* add user code end 0 */

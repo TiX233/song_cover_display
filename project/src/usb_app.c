@@ -59,6 +59,8 @@
 /* private function prototypes --------------------------------------------*/
 /* add user code begin function prototypes */
 
+usbd_core_type usb_core_dev;
+#if 0
 /* add user code end function prototypes */
 
 usbd_core_type usb_core_dev;
@@ -67,7 +69,7 @@ uint32_t usbd_app_buffer_fs1[128];
 
 /* private user code ---------------------------------------------------------*/
 /* add user code begin 0 */
-
+#endif
 /* add user code end 0 */
 
 /**
@@ -100,7 +102,7 @@ void wk_usb_app_init(void)
 void wk_usb_app_task(void)
 {
   /* add user code begin usb_app_task 0 */
-
+#if 0
   /* add user code end usb_app_task 0 */
 
   uint32_t length = 0;
@@ -133,7 +135,7 @@ void wk_usb_app_task(void)
   }
 
   /* add user code begin usb_app_task 2 */
-
+#endif
   /* add user code end usb_app_task 2 */
 }
 

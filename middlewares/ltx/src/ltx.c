@@ -244,14 +244,14 @@ void ltx_Sys_scheduler(void){
             }
             */
             if(pTopic->flag){
+                pTopic->flag = 0;
+
                 pSubscriber = pTopic->subscriber;
                 while(pSubscriber != NULL){
                     pSubscriber->callback_func(pSubscriber);
 
                     pSubscriber = pSubscriber->next;
                 }
-
-                pTopic->flag = 0;
             }
 
             pTopic = pTopic->next;
