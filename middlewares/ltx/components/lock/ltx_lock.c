@@ -4,13 +4,18 @@ void _ltx_Lock_alarm_cb(void *param){
     struct ltx_Lock_stu *pLock = container_of(param, struct ltx_Lock_stu, _alarm);
 
     // 调用超时回调
-    pLock->timeout_callback(pLock);
+    if(pLock->lock){
+        pLock->timeout_callback(pLock);
+    }
 }
 
 #if 0
 void _ltx_Lock_subscriber_cb(void *param){
     struct ltx_Lock_stu *pLock = container_of(param, struct ltx_Lock_stu, _subscriber);
     
+    // 耗时且有死循环风险的操作，不放中断里
+    ltx_Alarm_remove(&pLock->_alarm);
+
     ltx_Topic_publish(&pLock->topic_lock_release);
 }
 #endif
@@ -54,13 +59,13 @@ void ltx_Lock_on(struct ltx_Lock_stu *lock, TickType_t timeout){
 
 void ltx_Lock_off(struct ltx_Lock_stu *lock){
     // if(lock->lock){
-        ltx_Alarm_remove(&lock->_alarm);
+        lock->lock = 0;
 #if 0
         ltx_Topic_publish(&lock->_topic);
 #else
+        // ltx_Alarm_remove(&lock->_alarm); 等闹钟超时自动 remove
         ltx_Topic_publish(&lock->topic_lock_release);
 #endif
-        lock->lock = 0;
     // }
 }
 

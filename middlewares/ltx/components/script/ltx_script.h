@@ -1,7 +1,7 @@
 /**
  * @file ltx_script.h
  * @author realTiX
- * @brief ltx 可选脚本组件。用于动画或者初始化硬件之类的执行序列，可在自定义回调设置下一 step 类型实现分支结构，每个 step 间可自定义延时。步骤可等待事件并设置超时时间。（状态机协程疑似
+ * @brief ltx 可选脚本组件，依赖 ltx_lock。用于动画或者初始化硬件之类的执行序列，可在自定义回调设置下一 step 类型实现分支结构，每个 step 间可自定义延时。步骤可等待锁或事件并设置超时时间。（状态机协程疑似
  * @version 0.4
  * @date 2025-11-25 (0.1，初步完成功能设计)
  *       2025-12-01 (0.2，增加等待事件步骤类型，重构所有内容)
@@ -19,7 +19,8 @@
 // 脚本步骤类型
 typedef enum {
     SC_TYPE_RUN_DELAY = 0,  // 从 该步骤开始运行或运行完 到 下一步骤开始运行 间隔一定时间
-    SC_TYPE_WAIT_TOPIC,     // 等待某个事件话题发布，超时时间设为 0 将一直等待直到 TickType_t 溢出（50 来天），该类型步骤执行完会立即执行下一步骤
+    SC_TYPE_WAIT_TOPIC,     // 等待某个事件话题发布，超时时间设为 0 将一直等待直到 TickType_t 溢出（50 来天）
+    SC_TYPE_WAIT_LOCK,      // 等待某个锁释放，todo
     SC_TYPE_OVER,           // 序列结束，不再执行
 } ltx_Script_step_type_e;
 

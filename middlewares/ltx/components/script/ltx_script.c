@@ -74,7 +74,7 @@ int ltx_Script_init(struct ltx_Script_stu *script, void (*callback)(struct ltx_S
  * @param   script: 脚本对象指针
  * @param   next_step_type: 下一步骤编号，不可设置为 0
  * @param   step_type: 下一次执行的步骤的类型
- * @param   delay_ticks: 当前步骤与下一步骤间的延时 或（如果下一步骤类型为 SC_TYPE_WAIT_TOPIC）下一步骤超时时间
+ * @param   delay_ticks: 当前步骤与下一步骤间的延时 或（如果下一步骤类型为 SC_TYPE_WAIT_TOPIC）下一步骤超时时间 或 （如果下一步骤类型为 SC_TYPE_WAIT_LOCK）该步骤占有锁的超时时间
  * @param   topic_wait_for: 下一该步骤等待的事件，仅 step_type 为 SC_TYPE_WAIT_TOPIC 有效，非该类型则可传入 NULL
  * @retval  非 0 代表设置失败
  */
@@ -107,6 +107,10 @@ int ltx_Script_set_next_step(struct ltx_Script_stu *script, uint32_t step_next, 
             ltx_Alarm_set_count(&(script->alarm_next_run), delay_ticks);
             ltx_Alarm_add(&(script->alarm_next_run));
 
+            break;
+
+        case SC_TYPE_WAIT_LOCK:
+            
             break;
 
         case SC_TYPE_OVER:

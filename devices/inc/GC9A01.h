@@ -71,7 +71,6 @@ struct rgb_565_stu {
 
 struct gc9a01_stu {
     uint8_t is_initialized;
-    uint8_t flag_dma_lock;
 
     void (*write_cs)(uint8_t pin_level);
     void (*write_dc)(uint8_t pin_level);
@@ -81,7 +80,6 @@ struct gc9a01_stu {
 
     void (*transmit_data)(const uint8_t *buf, uint16_t len);
     void (*transmit_data_dma)(const uint8_t *buf, uint16_t len);
-    void (*before_dma_trans)(void);
 
     void (*delay_ms)(uint32_t ms);
     void (*pin_init)(void);

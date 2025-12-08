@@ -169,8 +169,7 @@ int gc9a01_init(struct gc9a01_stu *lcd){
         !lcd->transmit_data || 
         !lcd->transmit_data_dma || 
         !lcd->delay_ms || 
-        !lcd->pin_init || 
-        !lcd->before_dma_trans){
+        !lcd->pin_init){
 
         return -1;
     }

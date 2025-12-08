@@ -48,7 +48,7 @@ struct ltx_Event_stu event_device_init_over;
 
 // 显示屏对象结构体
 struct gc9a01_stu myLCD = {
-    .flag_dma_lock = 0,
+    .is_initialized = 0,
 
     .write_cs = myLCD_write_cs,
     .write_dc = myLCD_write_dc,
@@ -58,7 +58,6 @@ struct gc9a01_stu myLCD = {
 
     .transmit_data = myLCD_transmit_data,
     .transmit_data_dma = myLCD_transmit_data_dma,
-    .before_dma_trans = myLCD_before_dma_trans,
 
     .delay_ms = HAL_Delay,
     .pin_init = myLCD_pin_init,
@@ -287,10 +286,6 @@ void myLCD_transmit_data_dma(const uint8_t *buf, uint16_t len){
         LOG_FMT(PRINT_ERROR"Spi dma tx Error: %d, %d\n", spi_tx_status, spi1_handler.ErrorCode);
         LOG_FMT(PRINT_ERROR"Dma: %d\n", dma1ch1_handler.State);
     }
-}
-
-void myLCD_before_dma_trans(void){
-
 }
 
 void myLCD_pin_init(void){

@@ -7,6 +7,8 @@
 #include "myAPP_device_init.h"
 #include "myAPP_system.h"
 #include "math.h"
+#include "ltx_lock.h"
+
 
 void script_cb_pic_rotate(struct ltx_Script_stu *script);
 void script_cb_pic_rotate_sub(struct ltx_Script_stu *script);
@@ -14,12 +16,18 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script);
 void script_cb_pic_down(struct ltx_Script_stu *script);
 void script_cb_pic_down_sub(struct ltx_Script_stu *script);
 
+// 锁超时回调
+void lock_cb_spi(struct ltx_Lock_stu *lock);
+
 // 图片缓存
 uint16_t picture_buffer[240*240] = {0};
 // 显示缓存
 uint16_t pfb_0[240*24];
 uint16_t pfb_1[240*24];
 uint16_t *pfb_s[] = {pfb_0, pfb_1};
+
+// spi 锁
+struct ltx_Lock_stu lock_spi = {.lock = 1};
 
 // dma 发送完成话题
 struct ltx_Topic_stu topic_spi_tx_over = {
@@ -77,11 +85,11 @@ int myAPP_display_init(struct ltx_App_stu *app){
         picture_buffer[x] = 0x00F8;
     }*/
     // 创建封面旋转脚本
-    // if(ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL)){
-    //     _SYS_ERROR(0xFFFF, "Pic rotate script create Failed!");
+    if(ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL)){
+        _SYS_ERROR(0xFFFF, "Pic rotate script create Failed!");
 
-    //     return -1;
-    // }
+        return -1;
+    }
     // 创建封面下落脚本
     if(ltx_Script_init(&script_pic_down, script_cb_pic_down, SC_TYPE_RUN_DELAY, 0, NULL)){
         _SYS_ERROR(0xFFFF, "Pic down script create Failed!");
@@ -93,6 +101,9 @@ int myAPP_display_init(struct ltx_App_stu *app){
     ltx_Topic_add(&topic_spi_tx_over);
     ltx_Topic_add(&topic_draw_frame_over);
     ltx_Topic_add(&topic_pic_down_over);
+
+    // 初始化 spi 锁
+    ltx_Lock_init(&lock_spi, lock_cb_spi);
     
     return 0;
 }
@@ -139,7 +150,9 @@ struct ltx_App_stu app_display = {
 };
 
 
-#define PI 3.141592653589793
+#define PI       3.141592653589793f
+float CENTER_X = 119.5f;
+float CENTER_Y = 119.5f;
 
 uint8_t is_point_in_display_circle(int x, int y) {
     // 计算(x-120)² + (y-120)²
@@ -151,7 +164,7 @@ uint8_t is_point_in_display_circle(int x, int y) {
     return (dist_sq <= 14400) ? 1 : 0;
 }
 
-static inline double deg2rad(double degree) {
+static inline float deg2rad(float degree) {
     return degree * PI / 180.0;
 }
 
@@ -175,23 +188,28 @@ static uint16_t disp_block = 0;
 // 旋转图片单帧刷新子脚本
 void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
     uint16_t x, y;
-    double angle;
-    double cos_angle;
-    double sin_angle;
+    static float angle;
+    static float cos_angle;
+    static float sin_angle;
     
-    double dx;
-    double dy;
-    double src_x;
-    double src_y;
+    float dx;
+    float dy;
+    float src_x;
+    float src_y;
     int src_x_int;
     int src_y_int;
 
+    float sccs;
+
+    // static uint8_t flag_1 = 1;
+    // static TickType_t time_cost = 0;
+
     switch(script->step_now){
-        case 1: // 初始化变量
+        case 1:
             disp_block = 0;
             angle = deg2rad(disp_angle);
-            cos_angle = cos(angle);
-            sin_angle = sin(angle);
+            cos_angle = cosf(angle);
+            sin_angle = sinf(angle);
 
             if(disp_angle == 0){ // 0 度，直接将原图数据转到 pfb
                 for(y = 0; y < 24; y ++){
@@ -201,101 +219,72 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
                 }
             }else { // 换算旋转后的数据转到 pfb
                 // 角度转弧度
+                // if(flag_1){
+                //     time_cost = ltx_Sys_get_tick();
+                // }
                 for(y = 0; y < 24; y ++){
                     for(x = 0; x < 240; x ++){
                         // if(is_point_in_display_circle(x, y)){ // 在圆内
                         // 坐标换算
-                        dx = x - 195.5;
-                        dy = y - 195.5;
-                        src_x = dx * cos_angle + dy * sin_angle + 195.5;
-                        src_y = -dx * sin_angle + dy * cos_angle + 195.5;
+                        dx = x - CENTER_X;
+                        dy = y - CENTER_Y;
+                        src_x = dx * cos_angle + dy * sin_angle + CENTER_X;
+                        src_y = -dx * sin_angle + dy * cos_angle + CENTER_Y;
                         // 最近邻插值
                         src_x_int = (int)(src_x + 0.5);  // 四舍五入
                         src_y_int = (int)(src_y + 0.5);  // 四舍五入
 
                         if (src_x_int >= 0 && src_x_int < 240 && 
                             src_y_int >= 0 && src_y_int < 240) { // 换算后的点在范围内
-                            pfb_1[y*240 + x] = picture_buffer[src_y_int*240 + src_x_int];
+                            pfb_0[y*240 + x] = picture_buffer[src_y_int*240 + src_x_int];
                         }
                     }
                 }
+                // if(flag_1){
+                //     flag_1 = 0;
+                //     time_cost = ltx_Sys_get_tick() - time_cost;
+                //     LOG_FMT("ddd: %d\n", time_cost);
+                // }
             }
-            // 发送数据
-            gc9a01_set_window(&myLCD, 0, 0, 240-1, 24-1);
-            gc9a01_write_data_dma(&myLCD, (uint8_t *)pfb_0, 240*24*2);
-            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_WAIT_TOPIC, 10, &topic_spi_tx_over);
-
-            disp_block = 1;
-
-            if(disp_angle == 0){ // 0 度，直接将原图数据转到 pfb
-                for(y = disp_block*24; y < (disp_block + 1)*24; y ++){
-                    for(x = 0; x < 240; x ++){
-                        pfb_s[disp_block%2][y*240 + x] = picture_buffer[y*240 + x];
-                    }
-                }
-            }else { // 换算旋转后的数据转到 pfb
-                for(y = disp_block*24; y < (disp_block + 1)*24; y ++){
-                    for(x = 0; x < 240; x ++){
-                        // if(is_point_in_display_circle(x, y)){ // 在圆内
-                        // 坐标换算
-                        dx = x - 195.5;
-                        dy = y - 195.5;
-                        src_x = dx * cos_angle + dy * sin_angle + 195.5;
-                        src_y = -dx * sin_angle + dy * cos_angle + 195.5;
-                        // 最近邻插值
-                        src_x_int = (int)(src_x + 0.5);  // 四舍五入
-                        src_y_int = (int)(src_y + 0.5);  // 四舍五入
-
-                        if (src_x_int >= 0 && src_x_int < 240 && 
-                            src_y_int >= 0 && src_y_int < 240) { // 换算后的点在范围内
-                            pfb_1[y*240 + x] = picture_buffer[src_y_int*240 + src_x_int];
-                        }
-                    }
-                }
-            }
+            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 0, NULL);
 
             break;
 
-        case 2: // 等待 buffer 传输完成后写 buffer
-            if(disp_block == 10){ // 单帧传输完毕
-                ltx_Script_set_next_step(script, 3, SC_TYPE_OVER, 0, &topic_spi_tx_over);
-                ltx_Topic_publish(&topic_draw_frame_over);
-
-                return ;
-            }
-            gc9a01_set_window(&myLCD, 0, 24*disp_block, 240-1, (24-1)*(disp_block+1));
+        case 2:
+            HAL_SPI_DMAStop(&spi1_handler);
+            gc9a01_set_window(&myLCD, 0, 24*disp_block, 240-1, (24)*(disp_block+1)-1);
             gc9a01_write_data_dma(&myLCD, (uint8_t *)pfb_s[disp_block%2], 240*24*2);
 
-            ltx_Script_set_next_step(script, 2, SC_TYPE_WAIT_TOPIC, 10, &topic_spi_tx_over);
-
             disp_block ++;
+            if(disp_block == 10){ // 已经画完最后一个 block，只等刷完最后一个 block
+                ltx_Script_set_next_step(script, 3, SC_TYPE_WAIT_TOPIC, 30, &topic_spi_tx_over);
 
-            if(disp_block == 10){
                 return ;
             }
-
+            ltx_Script_set_next_step(script, 2, SC_TYPE_WAIT_TOPIC, 30, &topic_spi_tx_over);
+            // 计算并写缓存
             if(disp_angle == 0){ // 0 度，直接将原图数据转到 pfb
-                for(y = disp_block*24; y < (disp_block + 1)*24; y ++){
+                for(y = 0; y < 24; y ++){
                     for(x = 0; x < 240; x ++){
-                        pfb_s[disp_block%2][y*240 + x] = picture_buffer[y*240 + x];
+                        pfb_s[disp_block%2][y*240 + x] = picture_buffer[(y+disp_block*24)*240 + x];
                     }
                 }
             }else { // 换算旋转后的数据转到 pfb
-                for(y = disp_block*24; y < (disp_block + 1)*24; y ++){
+                for(y = 0; y < 24; y ++){
                     for(x = 0; x < 240; x ++){
                         // if(is_point_in_display_circle(x, y)){ // 在圆内
                         // 坐标换算
-                        dx = x - 195.5;
-                        dy = y - 195.5;
-                        src_x = dx * cos_angle + dy * sin_angle + 195.5;
-                        src_y = -dx * sin_angle + dy * cos_angle + 195.5;
+                        dx = x - CENTER_X;
+                        dy = disp_block*24 + y - CENTER_Y;
+                        src_x = dx * cos_angle + dy * sin_angle + CENTER_X;
+                        src_y = -dx * sin_angle + dy * cos_angle + CENTER_Y;
                         // 最近邻插值
-                        src_x_int = (int)(src_x + 0.5);  // 四舍五入
-                        src_y_int = (int)(src_y + 0.5);  // 四舍五入
+                        src_x_int = (int)(src_x + 0.5f);  // 四舍五入
+                        src_y_int = (int)(src_y + 0.5f);  // 四舍五入
 
                         if (src_x_int >= 0 && src_x_int < 240 && 
                             src_y_int >= 0 && src_y_int < 240) { // 换算后的点在范围内
-                            pfb_1[y*240 + x] = picture_buffer[src_y_int*240 + src_x_int];
+                            pfb_s[disp_block%2][y*240 + x] = picture_buffer[src_y_int*240 + src_x_int];
                         }
                     }
                 }
@@ -303,7 +292,9 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
 
             break;
 
-        case 3:
+        case 3: // 最后一个 block dma 发送完毕
+            ltx_Script_set_next_step(script, 3, SC_TYPE_OVER, 0, NULL);
+            ltx_Topic_publish(&topic_draw_frame_over);
 
             break;
 
@@ -315,6 +306,8 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
 
 // 旋转图片脚本
 void script_cb_pic_rotate(struct ltx_Script_stu *script){
+
+    // static TickType_t time_cost = 0;
 
     switch(script->step_now){
         case 1: // 初始化变量
@@ -336,7 +329,7 @@ void script_cb_pic_rotate(struct ltx_Script_stu *script){
             if(ltx_Script_get_triger_type(script) == SC_TT_TOPIC){ // 单帧画完
                 disp_angle ++;
                 ltx_Script_init(&script_pic_rotate_sub, script_cb_pic_rotate_sub, SC_TYPE_RUN_DELAY, 0, NULL);
-            ltx_Script_resume(&script_pic_rotate_sub);
+                ltx_Script_resume(&script_pic_rotate_sub);
             }else { // 超时
                 ltx_Script_pause(&script_pic_rotate_sub);
                 LOG_STR(PRINT_WARNNING"Draw frame timeout!\n");
@@ -345,6 +338,9 @@ void script_cb_pic_rotate(struct ltx_Script_stu *script){
                 ltx_Script_resume(&script_pic_rotate_sub);
             }
             ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 50, &topic_draw_frame_over);
+            // time_cost = ltx_Sys_get_tick() - time_cost;
+            // LOG_FMT("tc:%d\n", time_cost);
+            // time_cost = ltx_Sys_get_tick();
 
             break;
 
@@ -453,13 +449,32 @@ void script_cb_pic_down(struct ltx_Script_stu *script){
 
 void disp_pic_down(void){
 
+    HAL_SPI_DMAStop(&spi1_handler);
+
     ltx_Script_pause(&script_pic_down);
     ltx_Script_init(&script_pic_down, script_cb_pic_down, SC_TYPE_RUN_DELAY, 0, NULL);
     ltx_Script_resume(&script_pic_down);
 }
 
+void disp_pic_rotate(uint8_t on_off){
+    HAL_SPI_DMAStop(&spi1_handler);
+
+    ltx_Script_pause(&script_pic_rotate);
+    if(on_off){
+        ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL);
+        ltx_Script_resume(&script_pic_rotate);
+    }
+}
+
 // spi dma 发送完成回调
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi){
     // LOG_STR("\td\n");
+    ltx_Lock_off(&lock_spi);
     ltx_Topic_publish(&topic_spi_tx_over);
+}
+
+// 锁超时回调
+void lock_cb_spi(struct ltx_Lock_stu *lock){
+    HAL_SPI_DMAStop(&spi1_handler);
+    ltx_Lock_off(lock);
 }

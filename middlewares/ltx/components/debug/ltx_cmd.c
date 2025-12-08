@@ -31,6 +31,7 @@ void cmd_cb_tonearm_get(uint8_t argc, char *argv[]);
 void cmd_cb_tonearm_set(uint8_t argc, char *argv[]);
 
 void cmd_cb_pic_down(uint8_t argc, char *argv[]);
+void cmd_cb_pic_rotate(uint8_t argc, char *argv[]);
 
 ltx_Cmd_item cmd_list[] = {
     {
@@ -109,6 +110,12 @@ ltx_Cmd_item cmd_list[] = {
         .cmd_name = "pic_down",
         .brief = "debug pic down anim",
         .cmd_cb = cmd_cb_pic_down,
+    },
+
+    {
+        .cmd_name = "pic_rotate",
+        .brief = "debug pic rotate anim",
+        .cmd_cb = cmd_cb_pic_rotate,
     },
 
 
@@ -692,5 +699,21 @@ void cmd_cb_pic_down(uint8_t argc, char *argv[]){
     LOG_STR(PRINT_LOG"Display pic down\n");
 
     disp_pic_down();
+}
+void disp_pic_rotate(uint8_t on_off);
 
+void cmd_cb_pic_rotate(uint8_t argc, char *argv[]){
+    if(argc < 2){
+        goto Useage_pic_rotate;
+    }
+    uint8_t on_off;
+    sscanf(argv[1], "%d", &on_off);
+
+    LOG_FMT(PRINT_LOG"Set pic rotate: %d\n", on_off);
+
+    disp_pic_rotate(on_off);
+
+    return ;
+Useage_pic_rotate:
+    LOG_FMT(PRINT_LOG"Useage: %s <0/1>\n", argv[0]);
 }
