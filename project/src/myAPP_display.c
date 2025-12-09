@@ -60,8 +60,18 @@ struct ltx_Script_stu script_pic_rotate_sub;
 struct ltx_Script_stu script_pic_down;
 struct ltx_Script_stu script_pic_down_sub;
 
-int myAPP_display_init(struct ltx_App_stu *app){
-    
+
+void reset_pic_buf(uint16_t color){
+    color = (color >> 8) | (color << 8);
+    for(uint16_t y = 0; y < 240; y ++){
+        for(uint16_t x = 0; x < 240; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+}
+
+
+void reset_pic_buf_ms(void){
     uint16_t i, j;
     
     for(i = 0; i < 240/2; i ++){
@@ -80,6 +90,82 @@ int myAPP_display_init(struct ltx_App_stu *app){
         for(j = 240/2; j < 240; j ++)
         picture_buffer[i*240 + j] = (RGB565_YELLOW>>8) | (RGB565_YELLOW<<8);
     }
+}
+
+uint16_t tix_color = 0xFFFF;
+
+uint16_t T_start_x = 22;
+uint16_t T_start_y = 70;
+uint16_t T_heng_w  = 65;
+uint16_t T_heng_h  = 18;
+
+uint16_t T_shu_w   = 20;
+uint16_t T_shu_h   = 82;
+
+uint16_t I_start_x = 110;
+uint16_t I_start_y = 70;
+uint16_t I_w       = 20;
+uint16_t I_shu_sy  = 100;
+uint16_t I_shu_h   = 70;
+
+uint16_t X_start_x = 153;
+uint16_t X_start_y = 70;
+uint16_t X_w       = 65;
+uint16_t X_h       = 100;
+uint16_t X_line_w  = 18;
+
+void reset_pic_buf_tix(uint16_t color){
+    color = (color >> 8) | (color << 8);
+    // T
+    // 横
+    for(uint16_t y = T_start_y; y < T_start_y + T_heng_h; y ++){
+        for(uint16_t x = T_start_x; x < T_start_x+T_heng_w; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+    // 竖
+    for(uint16_t y = T_start_y + T_heng_h; y < (T_start_y + T_heng_h + T_shu_h); y ++){
+        for(uint16_t x = T_start_x+(T_heng_w-T_shu_w)/2; x < (T_start_x+(T_heng_w-T_shu_w)/2 + T_shu_w); x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+
+    // i
+    // 点
+    for(uint16_t y = I_start_y; y < I_start_y + I_w; y ++){
+        for(uint16_t x = I_start_x; x < I_start_x + I_w; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+    // 竖
+    for(uint16_t y = I_shu_sy; y < I_shu_sy + I_shu_h; y ++){
+        for(uint16_t x = I_start_x; x < I_start_x + I_w; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+
+    // X
+    // 捺
+    uint16_t offset_x = 0;
+    for(uint16_t y = X_start_y; y < X_h + X_start_y; y ++){
+        offset_x = (y-X_start_y)*(X_w - X_line_w)/X_h;
+        for(uint16_t x = X_start_x + offset_x; x < X_start_x + X_line_w + offset_x; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+
+    //撇
+    offset_x = 0;
+    for(uint16_t y = X_start_y; y < X_h + X_start_y; y ++){
+        offset_x = (y-X_start_y)*(X_w - X_line_w)/X_h;
+        for(uint16_t x = X_start_x + X_w - X_line_w - offset_x; x < X_start_x + X_w - offset_x; x ++){
+            picture_buffer[y*240 + x] = color;
+        }
+    }
+}
+
+int myAPP_display_init(struct ltx_App_stu *app){
+    reset_pic_buf_ms();
     /*
     for(uint32_t x = 0; x < 240*240; x ++){
         picture_buffer[x] = 0x00F8;

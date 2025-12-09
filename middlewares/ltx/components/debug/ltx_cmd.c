@@ -33,6 +33,10 @@ void cmd_cb_tonearm_set(uint8_t argc, char *argv[]);
 void cmd_cb_pic_down(uint8_t argc, char *argv[]);
 void cmd_cb_pic_rotate(uint8_t argc, char *argv[]);
 
+void cmd_cb_rst_pic(uint8_t argc, char *argv[]);
+void cmd_cb_rst_pic_ms(uint8_t argc, char *argv[]);
+void cmd_cb_rst_pic_tix(uint8_t argc, char *argv[]);
+
 ltx_Cmd_item cmd_list[] = {
     {
         .cmd_name = "echo",
@@ -106,6 +110,7 @@ ltx_Cmd_item cmd_list[] = {
     },
 
 
+    // 播放图像动画
     {
         .cmd_name = "pic_down",
         .brief = "debug pic down anim",
@@ -116,6 +121,26 @@ ltx_Cmd_item cmd_list[] = {
         .cmd_name = "pic_rotate",
         .brief = "debug pic rotate anim",
         .cmd_cb = cmd_cb_pic_rotate,
+    },
+
+    
+    // 重置图像缓存
+    {
+        .cmd_name = "rst_pic",
+        .brief = "reset pic buf to one color",
+        .cmd_cb = cmd_cb_rst_pic,
+    },
+    
+    {
+        .cmd_name = "rst_pic_tix",
+        .brief = "draw tix to pic buf",
+        .cmd_cb = cmd_cb_rst_pic_tix,
+    },
+    
+    {
+        .cmd_name = "rst_pic_ms",
+        .brief = "reset pic buf to ms",
+        .cmd_cb = cmd_cb_rst_pic_ms,
     },
 
 
@@ -691,17 +716,17 @@ Useage_tonearm_set:
     LOG_FMT(PRINT_LOG"Useage: %s <close/leave> <duty(0~100)>\n", argv[0]);
 }
 
-
+// 播放图像下落动画
 void disp_pic_down(void);
-
 void cmd_cb_pic_down(uint8_t argc, char *argv[]){
 
     LOG_STR(PRINT_LOG"Display pic down\n");
 
     disp_pic_down();
 }
-void disp_pic_rotate(uint8_t on_off);
 
+// 播放或关闭图像旋转命令
+void disp_pic_rotate(uint8_t on_off);
 void cmd_cb_pic_rotate(uint8_t argc, char *argv[]){
     if(argc < 2){
         goto Useage_pic_rotate;
@@ -716,4 +741,44 @@ void cmd_cb_pic_rotate(uint8_t argc, char *argv[]){
     return ;
 Useage_pic_rotate:
     LOG_FMT(PRINT_LOG"Useage: %s <0/1>\n", argv[0]);
+}
+
+// 设置图片缓存
+void reset_pic_buf(uint16_t color);
+void reset_pic_buf_ms(void);
+void reset_pic_buf_tix(uint16_t color);
+
+void cmd_cb_rst_pic(uint8_t argc, char *argv[]){
+    if(argc < 2){
+        goto Useage_rst_pic;
+    }
+    uint16_t color;
+    sscanf(argv[1], "%x", &color);
+
+    reset_pic_buf(color);
+    LOG_FMT(PRINT_LOG"Reset pic buf to 0x%04x\n", color);
+
+    return ;
+Useage_rst_pic:
+    LOG_FMT(PRINT_LOG"Useage: %s <color(e.g 0x1234)>\n", argv[0]);
+}
+
+void cmd_cb_rst_pic_ms(uint8_t argc, char *argv[]){
+    reset_pic_buf_ms();
+    LOG_STR(PRINT_LOG"Reset pic buf to ms\n");
+}
+
+void cmd_cb_rst_pic_tix(uint8_t argc, char *argv[]){
+    if(argc < 2){
+        goto Useage_rst_pic_tix;
+    }
+    uint16_t color;
+    sscanf(argv[1], "%x", &color);
+
+    reset_pic_buf_tix(color);
+    LOG_FMT(PRINT_LOG"Draw tix(0x%04x) to pic buf\n", color);
+
+    return ;
+Useage_rst_pic_tix:
+    LOG_FMT(PRINT_LOG"Useage: %s <color(e.g 0x1234)>\n", argv[0]);
 }
