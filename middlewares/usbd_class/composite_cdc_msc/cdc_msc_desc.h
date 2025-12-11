@@ -67,8 +67,8 @@ extern "C" {
 /**
   * @brief usb string define(vendor, product configuration, interface)
   */
-#define USBD_CDC_DESC_MANUFACTURER_STRING    "Artery"
-#define USBD_CDC_DESC_PRODUCT_STRING         "AT32 Composite VCP and MSC  "
+#define USBD_CDC_DESC_MANUFACTURER_STRING    "realTiX"
+#define USBD_CDC_DESC_PRODUCT_STRING         "Song Cover Displayer"
 #define USBD_CDC_DESC_CONFIGURATION_STRING   "Composite VCP and MSC Config"
 #define USBD_CDC_DESC_INTERFACE_STRING       "Composite VCP and MSC Interface"
 

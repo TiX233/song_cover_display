@@ -252,6 +252,7 @@ static usb_sts_type class_in_handler(void *udev, uint8_t ept_num)
   return status;
 }
 
+extern uint8_t *flag_usb_task_run;
 /**
   * @brief  usb device class endpoint receive data
   * @param  udev: to the structure of usbd_core_type
@@ -269,6 +270,9 @@ static usb_sts_type class_out_handler(void *udev, uint8_t ept_num)
 
   /*set recv flag*/
   pcdc->g_rx_completed = 1;
+
+  // 要求主循环尽快运行接收处理任务
+  *flag_usb_task_run = 1;
 
   return status;
 }
