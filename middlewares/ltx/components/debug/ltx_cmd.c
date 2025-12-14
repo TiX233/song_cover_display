@@ -37,6 +37,8 @@ void cmd_cb_rst_pic(uint8_t argc, char *argv[]);
 void cmd_cb_rst_pic_ms(uint8_t argc, char *argv[]);
 void cmd_cb_rst_pic_tix(uint8_t argc, char *argv[]);
 
+void cmd_cb_usb_tx(uint8_t argc, char *argv[]);
+
 ltx_Cmd_item cmd_list[] = {
     {
         .cmd_name = "echo",
@@ -141,6 +143,13 @@ ltx_Cmd_item cmd_list[] = {
         .cmd_name = "rst_pic_ms",
         .brief = "reset pic buf to ms",
         .cmd_cb = cmd_cb_rst_pic_ms,
+    },
+
+    
+    {
+        .cmd_name = "usb_tx",
+        .brief = "send string to usb",
+        .cmd_cb = cmd_cb_usb_tx,
     },
 
 
@@ -781,4 +790,49 @@ void cmd_cb_rst_pic_tix(uint8_t argc, char *argv[]){
     return ;
 Useage_rst_pic_tix:
     LOG_FMT(PRINT_LOG"Useage: %s <color(e.g 0x1234)>\n", argv[0]);
+}
+
+
+#include "usb_conf.h"
+#include "wk_system.h"
+
+#include "usbd_int.h"
+#include "cdc_class.h"
+#include "cdc_desc.h"
+
+extern usbd_core_type usb_core_dev;
+
+void cmd_cb_usb_tx(uint8_t argc, char *argv[]){
+    uint8_t length;
+    uint32_t timeout = 5000000;
+    if(argc < 2){
+        goto Useage_usb_tx;
+    }
+
+    for(length = 0; length < 64; length ++){
+        if(argv[1][length] == '\0'){
+            break;
+        }
+    }
+    
+    do
+    {
+        if(usb_vcp_send_data(&usb_core_dev, (uint8_t *)argv[1], length) == SUCCESS){
+            break;
+        }
+    }while(timeout --);
+
+    if(argc == 3){
+        timeout = 5000000;
+        do
+        {
+            if(usb_vcp_send_data(&usb_core_dev, (uint8_t *)argv[1], 0) == SUCCESS){
+                break;
+            }
+        }while(timeout --);
+    }
+
+    return ;
+Useage_usb_tx:
+    LOG_FMT(PRINT_LOG"Useage: %s <string>\n", argv[0]);
 }

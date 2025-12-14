@@ -7,7 +7,9 @@
 #include "myAPP_device_init.h"
 #include "myAPP_system.h"
 #include "math.h"
-#include "ltx_lock.h"
+// #include "ltx_lock.h"
+#include "tonearm.h"
+#include "myAPP_usb.h"
 
 
 void script_cb_pic_rotate(struct ltx_Script_stu *script);
@@ -16,8 +18,10 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script);
 void script_cb_pic_down(struct ltx_Script_stu *script);
 void script_cb_pic_down_sub(struct ltx_Script_stu *script);
 
+void script_cb_script_player(struct ltx_Script_stu *script);
+
 // 锁超时回调
-void lock_cb_spi(struct ltx_Lock_stu *lock);
+// void lock_cb_spi(struct ltx_Lock_stu *lock);
 
 // 图片缓存
 uint16_t picture_buffer[240*240] = {0};
@@ -27,7 +31,7 @@ uint16_t pfb_1[240*24];
 uint16_t *pfb_s[] = {pfb_0, pfb_1};
 
 // spi 锁
-struct ltx_Lock_stu lock_spi = {.lock = 1};
+// struct ltx_Lock_stu lock_spi = {.lock = 1};
 
 // dma 发送完成话题
 struct ltx_Topic_stu topic_spi_tx_over = {
@@ -53,12 +57,31 @@ struct ltx_Topic_stu topic_pic_down_over = {
     .next = NULL,
 };
 
+// 唱片机播放话题
+struct ltx_Topic_stu topic_player_resume = {
+    .flag = 0,
+    .subscriber = NULL,
+
+    .next = NULL,
+};
+
+// 唱片机暂停话题
+struct ltx_Topic_stu topic_player_pause = {
+    .flag = 0,
+    .subscriber = NULL,
+
+    .next = NULL,
+};
+
 // 旋转图片脚本
 struct ltx_Script_stu script_pic_rotate;
 struct ltx_Script_stu script_pic_rotate_sub;
 // 下落图片脚本
 struct ltx_Script_stu script_pic_down;
 struct ltx_Script_stu script_pic_down_sub;
+
+// 唱片机总状态机脚本
+struct ltx_Script_stu script_player;
 
 
 void reset_pic_buf(uint16_t color){
@@ -164,8 +187,12 @@ void reset_pic_buf_tix(uint16_t color){
     }
 }
 
+
+// APP 相关
 int myAPP_display_init(struct ltx_App_stu *app){
-    reset_pic_buf_ms();
+    // reset_pic_buf_ms();
+    reset_pic_buf(0x0000);
+    reset_pic_buf_tix(tix_color);
     /*
     for(uint32_t x = 0; x < 240*240; x ++){
         picture_buffer[x] = 0x00F8;
@@ -183,37 +210,43 @@ int myAPP_display_init(struct ltx_App_stu *app){
         return -1;
     }
 
+    // 创建唱片机总状态机脚本
+    if(ltx_Script_init(&script_player, script_cb_script_player, SC_TYPE_RUN_DELAY, 0, NULL)){
+        _SYS_ERROR(0xFFFF, "Pic down script create Failed!");
+
+        return -1;
+    }
+
     // 注册话题
     ltx_Topic_add(&topic_spi_tx_over);
     ltx_Topic_add(&topic_draw_frame_over);
     ltx_Topic_add(&topic_pic_down_over);
+    ltx_Topic_add(&topic_player_resume);
+    ltx_Topic_add(&topic_player_pause);
 
     // 初始化 spi 锁
-    ltx_Lock_init(&lock_spi, lock_cb_spi);
+    // ltx_Lock_init(&lock_spi, lock_cb_spi);
     
     return 0;
 }
 
 int myAPP_display_pause(struct ltx_App_stu *app){
 
-    // ltx_Script_pause(&script_pic_down);
-    // ltx_Script_pause(&script_pic_rotate);
+    ltx_Script_pause(&script_player);
 
     return 0;
 }
 
 int myAPP_display_resume(struct ltx_App_stu *app){
 
-    // ltx_Script_resume(&script_pic_down);
-    // ltx_Script_resume(&script_pic_rotate);
+    ltx_Script_resume(&script_player);
 
     return 0;
 }
 
 int myAPP_display_destroy(struct ltx_App_stu *app){
 
-    // ltx_Script_pause(&script_pic_down);
-    // ltx_Script_pause(&script_pic_rotate);
+    ltx_Script_pause(&script_player);
 
     // free...
 
@@ -240,7 +273,7 @@ struct ltx_App_stu app_display = {
 float CENTER_X = 119.5f;
 float CENTER_Y = 119.5f;
 
-uint8_t is_point_in_display_circle(int x, int y) {
+uint8_t is_point_in_display_circle(int x, int y){
     // 计算(x-120)² + (y-120)²
     int dx = x - 120;
     int dy = y - 120;
@@ -250,12 +283,10 @@ uint8_t is_point_in_display_circle(int x, int y) {
     return (dist_sq <= 14400) ? 1 : 0;
 }
 
-static inline float deg2rad(float degree) {
-    return degree * PI / 180.0;
+static inline float deg2rad(float degree){
+    return degree * PI / 180.0f;
 }
 
-static uint16_t disp_angle = 0;
-static uint16_t disp_block = 0;
 
 /*
 双缓存刷新
@@ -271,6 +302,8 @@ static uint16_t disp_block = 0;
 主脚本：|创建第一帧刷新子脚本|                                                                                   | 创建第二帧刷新子脚本 |
 */
 
+uint16_t disp_angle = 0;
+static uint16_t disp_block = 0;
 // 旋转图片单帧刷新子脚本
 void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
     uint16_t x, y;
@@ -397,7 +430,7 @@ void script_cb_pic_rotate(struct ltx_Script_stu *script){
 
     switch(script->step_now){
         case 1: // 初始化变量
-            disp_angle = 0;
+            // disp_angle = 0;
 
             // 创建封面旋转子脚本
             ltx_Script_init(&script_pic_rotate_sub, script_cb_pic_rotate_sub, SC_TYPE_RUN_DELAY, 0, NULL);
@@ -438,9 +471,6 @@ void script_cb_pic_rotate(struct ltx_Script_stu *script){
 
 
 static uint16_t target_y = 0;
-uint8_t i = 0;
-
-
 // 下落图片单帧刷新子脚本
 void script_cb_pic_down_sub(struct ltx_Script_stu *script){
     uint16_t x, y;
@@ -537,6 +567,7 @@ void disp_pic_down(void){
 
     HAL_SPI_DMAStop(&spi1_handler);
 
+    ltx_Script_pause(&script_pic_rotate);
     ltx_Script_pause(&script_pic_down);
     ltx_Script_init(&script_pic_down, script_cb_pic_down, SC_TYPE_RUN_DELAY, 0, NULL);
     ltx_Script_resume(&script_pic_down);
@@ -545,6 +576,7 @@ void disp_pic_down(void){
 void disp_pic_rotate(uint8_t on_off){
     HAL_SPI_DMAStop(&spi1_handler);
 
+    ltx_Script_pause(&script_pic_down);
     ltx_Script_pause(&script_pic_rotate);
     if(on_off){
         ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL);
@@ -554,13 +586,207 @@ void disp_pic_rotate(uint8_t on_off){
 
 // spi dma 发送完成回调
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi){
-    // LOG_STR("\td\n");
-    ltx_Lock_off(&lock_spi);
+    // ltx_Lock_off(&lock_spi);
     ltx_Topic_publish(&topic_spi_tx_over);
 }
 
 // 锁超时回调
-void lock_cb_spi(struct ltx_Lock_stu *lock){
-    HAL_SPI_DMAStop(&spi1_handler);
-    ltx_Lock_off(lock);
+// void lock_cb_spi(struct ltx_Lock_stu *lock){
+//     HAL_SPI_DMAStop(&spi1_handler);
+//     ltx_Lock_off(lock);
+// }
+
+#define TONEARM_MAX_NOT_MOVE_COUNT          50
+extern struct tonearm_stu myTonearm;
+// 唱片机总状态机，也许更应该算唱臂状态机
+void script_cb_script_player(struct ltx_Script_stu *script){
+    static uint8_t tonearm_not_move_counter = 0;
+    static uint8_t _tm_duty = 0;
+
+    switch(script->step_now){
+        case 1: // 刚开机
+            // 播放下落动画
+            disp_pic_down();
+
+            tonearm_leave(&myTonearm, 0);
+
+            // 在下落动画播放完成后进入暂停预备态
+            ltx_Script_set_next_step(script, 2, SC_TYPE_WAIT_TOPIC, 1000, &topic_pic_down_over);
+
+            break;
+
+        case 2: // 下落动画播放完成
+            // 进入暂停预备态
+            ltx_Script_set_next_step(script, 4, SC_TYPE_WAIT_TOPIC, 25, &topic_player_resume);
+
+            break;
+
+        case 3: 
+
+            break;
+
+        case 4: // 暂停预备态，等待 usb 或唱臂离开完成
+            if(ltx_Script_get_triger_type(script) == SC_TT_TOPIC){ // 被话题触发，usb 要求播放
+
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_CLOSE){ // 已靠近，直接进播放态
+                    ltx_Script_set_next_step(script, 8, SC_TYPE_WAIT_TOPIC, 200, &topic_player_pause);
+
+                    _tm_duty = 0;
+                    tonearm_leave(&myTonearm, _tm_duty);
+
+
+                }else { // 否则进播放预备态
+                    ltx_Script_set_next_step(script, 7, SC_TYPE_WAIT_TOPIC, 25, &topic_player_pause);
+
+                    _tm_duty >>= 1; // duty 砍半
+                    tonearm_leave(&myTonearm, _tm_duty);
+                    _tm_duty = 0;
+
+                }
+                // 清零唱臂停滞计数
+                tonearm_not_move_counter = 0;
+
+                return ;
+
+            }else { // 等待超时而触发，判断唱臂是否完成离开
+                tonearm_detect(&myTonearm);
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_LEAVE){ // 唱臂已离开，进入暂停态
+                    _tm_duty = 0;
+                    tonearm_leave(&myTonearm, _tm_duty);
+                    tonearm_not_move_counter = 0;
+
+                    ltx_Script_set_next_step(script, 5, SC_TYPE_WAIT_TOPIC, 123, &topic_player_resume);
+                    return ;
+                }else {
+                    if(++tonearm_not_move_counter > TONEARM_MAX_NOT_MOVE_COUNT){ // 超过次数还是没有离开，报告上位机
+                        send_str_2_usb("/el\n", 4);
+
+                        // 5s 后继续尝试
+                        _tm_duty = 0;
+                        tonearm_leave(&myTonearm, _tm_duty);
+                        tonearm_not_move_counter = 0;
+                        ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 5000, &topic_player_resume);
+                        return ;
+                    }else {
+                        _tm_duty += 20;
+                        if(_tm_duty >= 100){
+                            _tm_duty = 100;
+                            ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 330, &topic_player_resume); // 等待一段时间，避免抖动
+                        }else {
+                            ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 20, &topic_player_resume);
+                        }
+                        tonearm_leave(&myTonearm, _tm_duty);
+                    }
+                }
+            }
+
+            break;
+
+        case 5: // 暂停态，等待 usb 或拨动唱臂
+            if(ltx_Script_get_triger_type(script) == SC_TT_TOPIC){ // 被话题触发，usb 要求播放
+                // 进入播放预备态
+                ltx_Script_set_next_step(script, 7, SC_TYPE_WAIT_TOPIC, 25, &topic_player_pause);
+
+                return ;
+
+            }else { // 等待超时而触发，判断是否唱臂变化
+
+                ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 123, &topic_player_resume);
+
+                tonearm_detect(&myTonearm);
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_CLOSE){ // 唱臂靠近，请求上位机播放
+                    send_str_2_usb("/q1\n", 4);
+                }
+            }
+
+            break;
+
+        case 6:
+
+            break;
+
+        case 7: // 播放预备态，等待 usb 或唱臂靠近完成
+            if(ltx_Script_get_triger_type(script) == SC_TT_TOPIC){ // 被话题触发，usb 要求暂停
+
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_LEAVE){ // 已离开，直接进暂停态
+                    ltx_Script_set_next_step(script, 5, SC_TYPE_WAIT_TOPIC, 200, &topic_player_resume);
+
+                    _tm_duty = 0;
+                    tonearm_close(&myTonearm, _tm_duty);
+
+
+                }else { // 否则进暂停预备态
+                    ltx_Script_set_next_step(script, 4, SC_TYPE_WAIT_TOPIC, 25, &topic_player_resume);
+
+                    _tm_duty >>= 1; // duty 砍半
+                    tonearm_close(&myTonearm, _tm_duty);
+                    _tm_duty = 0;
+
+                }
+                // 清零唱臂停滞计数
+                tonearm_not_move_counter = 0;
+
+                return ;
+
+            }else { // 等待超时而触发，判断唱臂是否完成靠近
+                tonearm_detect(&myTonearm);
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_CLOSE){ // 唱臂已靠近，进入播放态
+                    _tm_duty = 0;
+                    tonearm_close(&myTonearm, _tm_duty);
+                    tonearm_not_move_counter = 0;
+                    ltx_Script_set_next_step(script, 8, SC_TYPE_WAIT_TOPIC, 200, &topic_player_pause);
+                    return ;
+
+                }else {
+                    if(++tonearm_not_move_counter > TONEARM_MAX_NOT_MOVE_COUNT){ // 超过次数还是没有靠近，报告上位机
+                        send_str_2_usb("/ec\n", 4);
+
+                        // 5s 后继续尝试
+                        _tm_duty = 0;
+                        tonearm_close(&myTonearm, _tm_duty);
+                        tonearm_not_move_counter = 0;
+                        ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 5000, &topic_player_pause);
+                        return ;
+
+                    }else {
+                        _tm_duty += 10;
+                        if(_tm_duty >= 100){
+                            _tm_duty = 100;
+                            ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 330, &topic_player_pause); // 等待一段时间，避免抖动
+                        }else {
+                            ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 20, &topic_player_pause);
+                        }
+                        tonearm_close(&myTonearm, _tm_duty);
+                    }
+                }
+            }
+
+            break;
+
+        case 8: // 播放态，等待 usb 或拨动唱臂
+            if(ltx_Script_get_triger_type(script) == SC_TT_TOPIC){ // 被话题触发，usb 要求暂停
+                // 进入暂停预备态
+                ltx_Script_set_next_step(script, 4, SC_TYPE_WAIT_TOPIC, 25, &topic_player_resume);
+
+                return ;
+
+            }else { // 等待超时而触发，判断是否唱臂变化
+
+                ltx_Script_set_next_step(script, script->step_now, SC_TYPE_WAIT_TOPIC, 123, &topic_player_pause);
+
+                tonearm_detect(&myTonearm);
+                if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_LEAVE){ // 唱臂离开，请求上位机暂停
+                    send_str_2_usb("/q0\n", 4);
+                }
+            }
+
+            break;
+
+        case 9: // 
+
+            break;
+
+        default:
+            break;
+    }
 }

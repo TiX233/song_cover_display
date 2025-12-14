@@ -98,8 +98,8 @@ int myAPP_device_init_init(struct ltx_App_stu *app){
 
     // 创建所有外部硬件初始化完成事件组
     if(ltx_Event_init(&event_device_init_over, event_cb_device_init_over,
-                    // EVENT_INIT_LCD_OVER | EVENT_INIT_TONEARM_OVER,
-                    EVENT_INIT_LCD_OVER,
+                    EVENT_INIT_LCD_OVER | EVENT_INIT_TONEARM_OVER,
+                    // EVENT_INIT_LCD_OVER,
                     10000)){ // 10s 超时时间
         _SYS_ERROR(0xFFFF, "Device event group create Failed!");
 
@@ -112,7 +112,7 @@ int myAPP_device_init_init(struct ltx_App_stu *app){
 int myAPP_device_init_pause(struct ltx_App_stu *app){
 
     ltx_Script_pause(&script_lcd_init);
-    // ltx_Script_pause(&script_tonearm_init);
+    ltx_Script_pause(&script_tonearm_init);
 
     return 0;
 }
@@ -120,7 +120,7 @@ int myAPP_device_init_pause(struct ltx_App_stu *app){
 int myAPP_device_init_resume(struct ltx_App_stu *app){
 
     ltx_Script_resume(&script_lcd_init);
-    // ltx_Script_resume(&script_tonearm_init);
+    ltx_Script_resume(&script_tonearm_init);
 
     return 0;
 }
@@ -128,7 +128,7 @@ int myAPP_device_init_resume(struct ltx_App_stu *app){
 int myAPP_device_init_destroy(struct ltx_App_stu *app){
 
     ltx_Script_pause(&script_lcd_init);
-    // ltx_Script_pause(&script_tonearm_init);
+    ltx_Script_pause(&script_tonearm_init);
 
     ltx_Event_cancel(&event_device_init_over);
 
@@ -350,25 +350,25 @@ void script_cb_tonearm_init(struct ltx_Script_stu *script){
             break;
             
         case 4: // 渐渐增强驱动力
-            if(duty_now == 100){ // 驱动力拉满后等待 500ms
+            if(duty_now == 100){ // 驱动力拉满后等待一小段时间
                 try_times ++;
             }else {
                 tonearm_close(&myTonearm, ++ duty_now);
             }
 
-            if(try_times){ // 驱动力已拉满，检测唱针位置
+            if(try_times > 1){ // 驱动力已拉满，且已超过等待时间，检测唱针位置
                 tonearm_detect(&myTonearm);
                 if(last_stylus_status != tonearm_get_status(&myTonearm)){ // 唱针位置产生了变化
                     flag_check_type_okay = 1;
                     if(last_stylus_status == TONEARM_STATUS_LEAVE){ // 使用靠近函数，唱针由离开变为接近，正常反应，关闭输出后结束初始化
                         ltx_Script_set_next_step(script, 5, SC_TYPE_RUN_DELAY, 0, NULL);
                     }else { // 使用靠近函数，唱针由接近变为离开，需要反转驱动类型
-                        myTonearm.type = TONEARM_DT_B;
+                        myTonearm.type = TONEARM_DT_A;
                         flag_type_reversed = 1;
                         // 关闭输出后结束初始化
                         ltx_Script_set_next_step(script, 5, SC_TYPE_RUN_DELAY, 0, NULL);
                     }
-                }else if(try_times > 25){ // 驱动力拉满后等待时间超过 500ms 唱针没有位置变化
+                }else if(try_times > 15){ // 驱动力拉满等待后检测时间超过 300ms 唱针没有位置变化
                     if(flag_type_reversed == 0){ // 初次尝试，但是没有反应，尝试反转类型后再尝试一遍
                         // 先减小驱动力至关闭
                         ltx_Script_set_next_step(script, 5, SC_TYPE_RUN_DELAY, 0, NULL); 
@@ -380,8 +380,10 @@ void script_cb_tonearm_init(struct ltx_Script_stu *script){
                 }else { // 驱动力已拉满，唱针位置没发生变化且未超时，20ms 后再检测一次
                     ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 20, NULL);
                 }
-            }else { // 驱动力未拉满
-                ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 2, NULL);
+            }else if(try_times){ // 驱动力已拉满，但是没超过等待时间，等待一下，避免抖动
+                ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 390, NULL);
+            }else { // 驱动力未拉满，每毫秒增加百分之一的推力
+                ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 1, NULL);
             }
 
             break;

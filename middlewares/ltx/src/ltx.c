@@ -213,7 +213,10 @@ void ltx_Sys_tick_tack(void){
     while(pTimer != NULL){
         if(0 == -- pTimer->tick_counts){
             pTimer->tick_counts = pTimer->tick_reload;
-            ltx_Topic_publish(pTimer->topic);
+            // ltx_Topic_publish(pTimer->topic);
+            // 不调接口了，直接置 1 吧
+            // 暂时先不加判断 topic 是否空
+            pTimer->topic->flag = 1;
         }
         pTimer = pTimer->next;
     }
@@ -227,6 +230,7 @@ void ltx_Sys_scheduler(void){
     struct ltx_Topic_stu *pTopic;
     struct ltx_Topic_subscriber_stu *pSubscriber;
     struct ltx_Alarm_stu *pAlarm;
+    struct ltx_Alarm_stu *pAlarm2;
 
     while(1){
         // 处理订阅
@@ -259,12 +263,23 @@ void ltx_Sys_scheduler(void){
 
         // 处理闹钟
         pAlarm = ltx_sys_alarm_list.next;
+        pAlarm2 = &ltx_sys_alarm_list;
         while(pAlarm != NULL){
             if(pAlarm->flag){
-                ltx_Alarm_remove(pAlarm); // 必须先移除闹钟再调用回调，不然无法在回调中创建调用自己的闹钟
+                // 必须先移除闹钟再调用回调，不然无法在回调中创建调用自己的闹钟
+                // ltx_Alarm_remove(pAlarm);
+                // 不调用 remove，省得又遍历一遍，浪费时间
+                pAlarm2->next = pAlarm->next;
+                pAlarm->next = NULL;
+                pAlarm->flag = 0;
+
                 pAlarm->callback_alarm(pAlarm);
+
+                // 反正 next 是 null 了，不进到下一轮 while 判断了，赶紧重新遍历吧
+                break;
             }
 
+            pAlarm2 = pAlarm; // 但是每次循环要多跑一行代码🤔
             pAlarm = pAlarm->next;
         }
     }

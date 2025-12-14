@@ -2,10 +2,60 @@
 #include "ltx.h"
 #include "ltx_app.h"
 #include "ltx_log.h"
+#include "myAPP_display.h"
+
+#define PIC_PACK_LENGTH         61      // 单个包有效字节数
+#define PIC_PACK_NUMS           59*32   // 一张图片传输次数
 
 void task_func_usb_get(void *param);
 
 struct ltx_Task_stu task_usb_get;
+
+extern uint16_t picture_buffer[240*240];
+uint32_t pic_buf_pack_counter[59]; // 240*240*2/61/32
+
+// 重置丢包统计
+void pack_counter_reset(void){
+    for(uint8_t i = 0; i < 59; i ++){
+        pic_buf_pack_counter[i] = 0;
+    }
+}
+
+// 收包计入
+void pack_count_in(uint16_t pack_index){
+    pic_buf_pack_counter[pack_index/32] |= (1U << pack_index%32);
+}
+
+// 查找第一个丢的包
+uint16_t pack_get_first_lost_index(void){
+    for(uint8_t i = 0; i < 59; i ++){
+        if(pic_buf_pack_counter[i] != 0xFFFFFFFF){
+            for(uint8_t j = 0; j < 32; j ++){
+                if(!(pic_buf_pack_counter[i] & (1U << j))){
+                    return i*32 + j;
+                }
+            }
+        }
+    }
+
+    return PIC_PACK_NUMS;
+}
+
+// 获取丢包数
+uint16_t pack_get_lost_counter(void){
+    uint16_t lost_counter = 0;
+    for(uint8_t i; i < 59; i ++){
+        if(pic_buf_pack_counter[i] != 0xFFFFFFFF){
+            for(uint8_t j = 0; j < 32; j ++){
+                if(pic_buf_pack_counter[i] & (1U << j)){
+                    lost_counter ++;
+                }
+            }
+        }
+    }
+
+    return lost_counter;
+}
 
 int myAPP_usb_init(struct ltx_App_stu *app){
     // 创建数据接收轮询任务
@@ -13,6 +63,8 @@ int myAPP_usb_init(struct ltx_App_stu *app){
     ltx_Task_set_period(&task_usb_get, 1, 1);
     ltx_Task_set_callback(&task_usb_get, task_func_usb_get);
     ltx_Task_init(&task_usb_get, app);
+
+    pack_counter_reset();
 
     return 0;
 }
@@ -59,84 +111,189 @@ struct ltx_App_stu app_usb = {
 
 extern usbd_core_type usb_core_dev;
 extern cdc_struct_type cdc_struct;
+
+uint8_t usb_tx_buf0[64] = {0, 0, 0};
 uint8_t *usbd_rx_buffer0 = cdc_struct.g_rx_buff;
 uint8_t usbd_rx_buffer1[64] = {0, 0, 0};
 uint8_t *usb_rx_buffers[] = {cdc_struct.g_rx_buff, usbd_rx_buffer1};
 uint8_t usb_rx_buffer_now = 0;
+uint8_t *usb_rx_buffer_p_now = cdc_struct.g_rx_buff;
 // uint8_t *flag_usb_rx_cplt = &cdc_struct.g_rx_completed;
-// 在 usb 中断里直接置 1 usb 接收任务运行标志位，主循环立即运行读取任务而无需 1ms 后轮询
+// 在 usb 中断回调里直接置 1 usb 接收任务运行标志位，主循环一旦空闲立即运行读取任务而无需 1ms 后轮询
 uint8_t *flag_usb_task_run = &task_usb_get.topic.flag;
 
-extern uint16_t picture_buffer[240*240];
-uint16_t pic_buf_update_counter;
-
 void task_func_usb_get(void *param){
+    static uint8_t flag_in_rx_pic = 0;
+    uint16_t pack_lost_counter;
+
     uint16_t length;
-    uint8_t buffer_index;
+    // uint8_t buffer_index;
     uint16_t pic_update_index;
+    uint16_t first_lost_pack_index;
     // static uint32_t counter_get_times = 0;
 
-    // static uint8_t send_zero_packet = 0;
     if(cdc_struct.g_rx_completed){
         cdc_struct.g_rx_completed = 0;
         length = cdc_struct.g_rxlen;
 
-        buffer_index = usb_rx_buffer_now;
+        // buffer_index = usb_rx_buffer_now;
+        usb_rx_buffer_p_now = usb_rx_buffers[usb_rx_buffer_now];
 
-        // 切换 buffer 立即接收下一包
+        // 切换 buffer 立即接收下一包，感觉可以放中断里，多搞几个 buffer
         usb_rx_buffer_now = (usb_rx_buffer_now+1)%2;
         usbd_ept_recv(&usb_core_dev, USBD_CDC_BULK_OUT_EPT, usb_rx_buffers[usb_rx_buffer_now], USBD_CDC_OUT_MAXPACKET_SIZE);
 
-        LOG_FMT("B%d, %d\n", buffer_index, length);
+        // LOG_FMT("B%d, %d\n", buffer_index, length);
         // 处理接收到的数据
-        switch(usb_rx_buffers[buffer_index][0]){
+        // switch(usb_rx_buffers[buffer_index][0]){
+        switch(usb_rx_buffer_p_now[0]){
             case '/': // 上位机命令包头
-                LOG_FMT("Get cmd:%s\n", usb_rx_buffers[buffer_index]);
+                // LOG_FMT("Get cmd:%s\n", usb_rx_buffers[buffer_index]);
+                // switch(usb_rx_buffers[buffer_index][1]){
+                switch(usb_rx_buffer_p_now[1]){
+                    case '0': // 暂停播放
+                        ltx_Topic_publish(&topic_player_pause);
+                        disp_pic_rotate(0);
+
+                        break;
+
+                    case '1': // 继续播放
+                        ltx_Topic_publish(&topic_player_resume);
+                        disp_pic_rotate(1);
+
+                        break;
+                        
+                    case 't': // 上位机准备发送图片
+                        // 暂停图片旋转
+                        disp_pic_rotate(0);
+                        disp_angle = 0;
+
+                        // 切换为准备接收图片状态
+                        flag_in_rx_pic = 1;
+
+                        // 重置丢包计数
+                        pack_counter_reset();
+
+                        // 发送准备 ok 命令
+                        if(cdc_struct.g_tx_completed){
+                            cdc_struct.g_tx_completed = 0;
+                            usb_tx_buf0[0] = '/';
+                            usb_tx_buf0[1] = 'k';
+                            usb_tx_buf0[2] = '\n';
+                            usb_tx_buf0[3] = '\0';
+                            usbd_ept_send(&usb_core_dev, USBD_CDC_BULK_IN_EPT, usb_tx_buf0, 4);
+                        }else { // 正在忙于发送其他数据
+                            // 先不管，等上位机重新要求
+                        }
+
+                        break;
+                        
+                    case 'o': // 传输结束
+                        // 判断是否有丢包
+                        pack_lost_counter = pack_get_lost_counter();
+                        if(!pack_lost_counter){ // 无丢包
+                            // 播放图片下落动画
+                            disp_pic_down();
+                            flag_in_rx_pic = 0;
+
+                            // 发送接收完毕消息
+                            if(cdc_struct.g_tx_completed){
+                                cdc_struct.g_tx_completed = 0;
+                                usb_tx_buf0[0] = '/';
+                                usb_tx_buf0[1] = 'a';
+                                usb_tx_buf0[2] = '\n';
+                                usb_tx_buf0[3] = '\0';
+                                usbd_ept_send(&usb_core_dev, USBD_CDC_BULK_IN_EPT, usb_tx_buf0, 4);
+                            }else { // 正在忙于发送其他数据
+                                // 
+                            }
+
+                            break;
+                        }
+                        // 有丢包
+                        first_lost_pack_index = pack_get_first_lost_index();
+                        if(pack_lost_counter < 10){ // 丢包数量较小，挨个请求
+                            if(cdc_struct.g_tx_completed){
+                                cdc_struct.g_tx_completed = 0;
+                                usb_tx_buf0[0] = '/';
+                                usb_tx_buf0[1] = 'r';
+                                usb_tx_buf0[2] = (first_lost_pack_index>>8);
+                                usb_tx_buf0[3] = first_lost_pack_index & 0xFF;
+                                usb_tx_buf0[4] = '\n';
+                                usb_tx_buf0[5] = '\0';
+                                usbd_ept_send(&usb_core_dev, USBD_CDC_BULK_IN_EPT, usb_tx_buf0, 6);
+                            }else { // 正在忙于发送其他数据
+                                // 
+                            }
+                        }else { // 丢包数量较大，要求从第一个丢包处开始重发图片
+                            if(cdc_struct.g_tx_completed){
+                                cdc_struct.g_tx_completed = 0;
+                                usb_tx_buf0[0] = '/';
+                                usb_tx_buf0[1] = 'x';
+                                usb_tx_buf0[2] = (first_lost_pack_index>>8);
+                                usb_tx_buf0[3] = first_lost_pack_index & 0xFF;
+                                usb_tx_buf0[4] = '\n';
+                                usb_tx_buf0[5] = '\0';
+                                usbd_ept_send(&usb_core_dev, USBD_CDC_BULK_IN_EPT, usb_tx_buf0, 6);
+                            }else { // 正在忙于发送其他数据
+                                // 
+                            }
+                        }
+
+                        break;
+
+                    default:
+
+                        break;
+                }
                 break;
 
             case '#': // 图片数据包头
-                pic_update_index = ((uint16_t)usb_rx_buffers[buffer_index][1] << 8) | usb_rx_buffers[buffer_index][2];
-                
-                LOG_FMT("Get pic:%d\n", pic_update_index);
+                if(!flag_in_rx_pic){ // 不处于准备接收图片状态，不响应
+                    break;
+                }
+                // 计算索引
+                // pic_update_index = ((uint16_t)usb_rx_buffers[buffer_index][1] << 8) | usb_rx_buffers[buffer_index][2];
+                pic_update_index = ((uint16_t)usb_rx_buffer_p_now[1] << 8) | usb_rx_buffer_p_now[2];
+                // 复制数据
+                for(uint8_t i = 0; i < 61; i ++){
+                    ((uint8_t *)picture_buffer)[pic_update_index * 61 + i] = usb_rx_buffer_p_now[i + 3];
+                }
+
+                // 统计包
+                pack_count_in(pic_update_index);
+
+                // LOG_FMT("Get pic:%d\n", pic_update_index);
                 break;
 
-            default:
+            default: // 未知格式，不处理
 
                 break;
         }
+        /*
         usb_rx_buffers[buffer_index][0] = 0;
         usb_rx_buffers[buffer_index][1] = 0;
         usb_rx_buffers[buffer_index][2] = 0;
+        */
+        usb_rx_buffer_p_now[0] = 0;
+        usb_rx_buffer_p_now[1] = 0;
+        usb_rx_buffer_p_now[2] = 0;
 
         // counter_get_times ++;
         // LOG_FMT("U %d, %d\n", counter_get_times, length);
     }
+}
 
-#if 0
-    length = usb_vcp_get_rxdata(&usb_core_dev, (uint8_t *)usbd_app_buffer_fs1);
-    if(length > 0){
-        usbd_app_buffer_fs1[length] = '\0';
-        LOG_FMT("USB_GET: %d, %s\n", length, usbd_app_buffer_fs1);
-    }
-#endif
-
-    #if 0
-    if(length > 0 || send_zero_packet == 1)
-    {
-        if(length > 0)
-            send_zero_packet = 1;
-
-        if(length == 0)
-        send_zero_packet = 0;
-        
-        do
-        {
-        /* send data to host */
-        if(usb_vcp_send_data(&usb_core_dev, (uint8_t *)usbd_app_buffer_fs1, length) == SUCCESS)
-        {
-            break;
+void send_str_2_usb(uint8_t *str, uint8_t len){
+    if(cdc_struct.g_tx_completed){
+        cdc_struct.g_tx_completed = 0;
+        uint8_t i;
+        for(i = 0; i < len; i ++){
+            usb_tx_buf0[i] = str[i];
         }
-        }while(timeout --);
+        usb_tx_buf0[i] = '\0';
+        usbd_ept_send(&usb_core_dev, USBD_CDC_BULK_IN_EPT, usb_tx_buf0, i);
+    }else { // 正在忙于发送其他数据
+        // 
     }
-    #endif
 }
