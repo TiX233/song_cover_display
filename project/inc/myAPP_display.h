@@ -7,8 +7,14 @@ extern struct ltx_App_stu app_display;
 extern struct ltx_Topic_stu topic_player_resume;
 extern struct ltx_Topic_stu topic_player_pause;
 
+extern uint16_t picture_buffer[240*240];
 extern uint16_t disp_angle;
+extern struct ltx_Topic_stu topic_spi_tx_over;
 extern struct ltx_Topic_stu topic_pic_down_over;
+
+extern uint16_t tix_color;
+void reset_pic_buf(uint16_t color);
+void reset_pic_buf_tix(uint16_t color);
 
 void disp_pic_down(void);
 void disp_pic_rotate(uint8_t on_off);

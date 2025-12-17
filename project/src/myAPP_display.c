@@ -115,7 +115,7 @@ void reset_pic_buf_ms(void){
     }
 }
 
-uint16_t tix_color = 0xFFFF;
+uint16_t tix_color = 0xEE96;
 
 uint16_t T_start_x = 22;
 uint16_t T_start_y = 70;
@@ -191,8 +191,8 @@ void reset_pic_buf_tix(uint16_t color){
 // APP 相关
 int myAPP_display_init(struct ltx_App_stu *app){
     // reset_pic_buf_ms();
-    reset_pic_buf(0x0000);
-    reset_pic_buf_tix(tix_color);
+    // reset_pic_buf(0x0000);
+    // reset_pic_buf_tix(tix_color);
     /*
     for(uint32_t x = 0; x < 240*240; x ++){
         picture_buffer[x] = 0x00F8;
@@ -581,6 +581,8 @@ void disp_pic_rotate(uint8_t on_off){
     if(on_off){
         ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL);
         ltx_Script_resume(&script_pic_rotate);
+    }else {
+        ltx_Script_pause(&script_pic_rotate_sub);
     }
 }
 
@@ -606,18 +608,20 @@ void script_cb_script_player(struct ltx_Script_stu *script){
     switch(script->step_now){
         case 1: // 刚开机
             // 播放下落动画
-            disp_pic_down();
+            // disp_pic_down();
 
             tonearm_leave(&myTonearm, 0);
 
+            // 下落图片动画可能会被上位机用 usb 关掉，所以放在 usb app 初始化前
             // 在下落动画播放完成后进入暂停预备态
-            ltx_Script_set_next_step(script, 2, SC_TYPE_WAIT_TOPIC, 1000, &topic_pic_down_over);
+            // ltx_Script_set_next_step(script, 2, SC_TYPE_WAIT_TOPIC, 1000, &topic_pic_down_over);
+
+            // 直接进暂停预备态
+            ltx_Script_set_next_step(script, 4, SC_TYPE_WAIT_TOPIC, 25, &topic_player_resume);
 
             break;
 
-        case 2: // 下落动画播放完成
-            // 进入暂停预备态
-            ltx_Script_set_next_step(script, 4, SC_TYPE_WAIT_TOPIC, 25, &topic_player_resume);
+        case 2:
 
             break;
 

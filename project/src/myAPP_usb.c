@@ -23,6 +23,9 @@ void pack_counter_reset(void){
 
 // 收包计入
 void pack_count_in(uint16_t pack_index){
+    if(pack_index > PIC_PACK_NUMS){
+        return ;
+    }
     pic_buf_pack_counter[pack_index/32] |= (1U << pack_index%32);
 }
 

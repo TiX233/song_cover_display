@@ -190,13 +190,13 @@ void script_cb_lcd_init(struct ltx_Script_stu *script){
             myLCD.write_cs(0);
 
             // 进入初始化
-            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 0, NULL);
+            ltx_Script_set_next_step(script, 9, SC_TYPE_RUN_DELAY, 0, NULL);
 
             break;
 
         default:
             // 初始化显示屏
-            uint32_t i = script->step_now - 5;
+            uint32_t i = script->step_now - 9;
             switch(gc9a01_init_table[i].ctrl){
                 case LCD_CTRL_WRITE_CMD:
                     gc9a01_write_cmd(&myLCD, gc9a01_init_table[i].data_buf[0]);
@@ -216,12 +216,13 @@ void script_cb_lcd_init(struct ltx_Script_stu *script){
                 case LCD_CTRL_OVER:
                     // 初始化完成
                     myLCD.is_initialized = 1;
-                    myLCD.set_backlight(100);
                     LOG_FMT(PRINT_LOG"LCD init Okay at step: %d, at %dms\n", script->step_now, ltx_Sys_get_tick());
-                    // 结束脚本
-                    ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_OVER, 0, NULL);
-                    // 发布 lcd 初始化完成事件
-                    ltx_Event_publish(&event_device_init_over, EVENT_INIT_LCD_OVER);
+                    // 清空缓存
+                    reset_pic_buf(0x0000);
+                    // 初始化显示 app
+                    ltx_App_init(&app_display);
+                    // 进入开机动画刷新状态
+                    ltx_Script_set_next_step(script, 5, SC_TYPE_RUN_DELAY, 0, NULL);
 
                     break;
 
@@ -233,6 +234,42 @@ void script_cb_lcd_init(struct ltx_Script_stu *script){
 
                     break;
             }
+
+            break;
+
+        case 5: // 准备刷黑屏
+            // 刷黑屏上半
+            gc9a01_set_window(&myLCD, 0, 0, 240-1, 119);
+            gc9a01_write_data_dma(&myLCD, (uint8_t *)picture_buffer, 240*120*2);
+            // 等待黑屏上半刷新完毕
+            ltx_Script_set_next_step(script, 6, SC_TYPE_WAIT_TOPIC, 50, &topic_spi_tx_over);
+
+            break;
+
+        case 6: // 准备刷黑屏下半
+            // 刷黑屏下半
+            gc9a01_set_window(&myLCD, 0, 120, 240-1, 240-1);
+            gc9a01_write_data_dma(&myLCD, (uint8_t *)picture_buffer, 240*120*2);
+            // 等待黑屏下半刷新完毕
+            ltx_Script_set_next_step(script, 7, SC_TYPE_WAIT_TOPIC, 50, &topic_spi_tx_over);
+
+            break;
+
+        case 7: // 画 logo
+            myLCD.set_backlight(100);
+            reset_pic_buf_tix(tix_color);
+
+            // 播放下落动画
+            disp_pic_down();
+            ltx_Script_set_next_step(script, 8, SC_TYPE_WAIT_TOPIC, 500, &topic_pic_down_over);
+
+            break;
+
+        case 8: // 图片下落完成
+            // 结束脚本
+            ltx_Script_set_next_step(script, 0, SC_TYPE_OVER, 0, NULL);
+            // 发布 lcd 初始化完成事件
+            ltx_Event_publish(&event_device_init_over, EVENT_INIT_LCD_OVER);
 
             break;
     }
@@ -453,7 +490,7 @@ void event_cb_device_init_over(struct ltx_Event_stu *event){
     ltx_App_destroy(&app_device_init);
     // 启动业务 app
     // 启动显示 app
-    ltx_App_init(&app_display);
+    // ltx_App_init(&app_display);
     ltx_App_resume(&app_display);
     // 启动 usb app
     ltx_App_init(&app_usb);
