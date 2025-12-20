@@ -273,6 +273,10 @@ struct ltx_App_stu app_display = {
 float CENTER_X = 119.5f;
 float CENTER_Y = 119.5f;
 
+// 舍入因数，七舍八入。0.5 为四舍五入，但是边缘会看到白点。以及改成宏定义后转速变快了，神奇优化
+#define ROUNDING_FACTOR 0.2f
+
+
 uint8_t is_point_in_display_circle(int x, int y){
     // 计算(x-120)² + (y-120)²
     int dx = x - 120;
@@ -350,8 +354,8 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
                         src_x = dx * cos_angle + dy * sin_angle + CENTER_X;
                         src_y = -dx * sin_angle + dy * cos_angle + CENTER_Y;
                         // 最近邻插值
-                        src_x_int = (int)(src_x + 0.5);  // 四舍五入
-                        src_y_int = (int)(src_y + 0.5);  // 四舍五入
+                        src_x_int = (int)(src_x + ROUNDING_FACTOR);  // 四舍五入
+                        src_y_int = (int)(src_y + ROUNDING_FACTOR);  // 四舍五入
 
                         if (src_x_int >= 0 && src_x_int < 240 && 
                             src_y_int >= 0 && src_y_int < 240) { // 换算后的点在范围内
@@ -398,8 +402,8 @@ void script_cb_pic_rotate_sub(struct ltx_Script_stu *script){
                         src_x = dx * cos_angle + dy * sin_angle + CENTER_X;
                         src_y = -dx * sin_angle + dy * cos_angle + CENTER_Y;
                         // 最近邻插值
-                        src_x_int = (int)(src_x + 0.5f);  // 四舍五入
-                        src_y_int = (int)(src_y + 0.5f);  // 四舍五入
+                        src_x_int = (int)(src_x + ROUNDING_FACTOR);  // 四舍五入
+                        src_y_int = (int)(src_y + ROUNDING_FACTOR);  // 四舍五入
 
                         if (src_x_int >= 0 && src_x_int < 240 && 
                             src_y_int >= 0 && src_y_int < 240) { // 换算后的点在范围内

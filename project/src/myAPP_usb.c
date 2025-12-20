@@ -23,9 +23,6 @@ void pack_counter_reset(void){
 
 // 收包计入
 void pack_count_in(uint16_t pack_index){
-    if(pack_index > PIC_PACK_NUMS){
-        return ;
-    }
     pic_buf_pack_counter[pack_index/32] |= (1U << pack_index%32);
 }
 
@@ -258,6 +255,9 @@ void task_func_usb_get(void *param){
                 // 计算索引
                 // pic_update_index = ((uint16_t)usb_rx_buffers[buffer_index][1] << 8) | usb_rx_buffers[buffer_index][2];
                 pic_update_index = ((uint16_t)usb_rx_buffer_p_now[1] << 8) | usb_rx_buffer_p_now[2];
+                if(pic_update_index > PIC_PACK_NUMS){
+                    break;
+                }
                 // 复制数据
                 for(uint8_t i = 0; i < 61; i ++){
                     ((uint8_t *)picture_buffer)[pic_update_index * 61 + i] = usb_rx_buffer_p_now[i + 3];
