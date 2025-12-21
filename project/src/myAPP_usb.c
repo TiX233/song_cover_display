@@ -3,13 +3,29 @@
 #include "ltx_app.h"
 #include "ltx_log.h"
 #include "myAPP_display.h"
+#include "GC9A01.h"
 
 #define PIC_PACK_LENGTH         61      // 单个包有效字节数
 #define PIC_PACK_NUMS           59*32   // 一张图片传输次数
 
+#define SLEEP_TICKS_COUNT       60*1000 // 60 秒 无上位机消息则休眠
+
 void task_func_usb_get(void *param);
+void alarm_cb_sleep(void *param);
+
+void _usb_get_up(void);
 
 struct ltx_Task_stu task_usb_get;
+struct ltx_Alarm_stu alarm_sleep = {
+    .flag = 0,
+    .tick_count_down = SLEEP_TICKS_COUNT,
+    .callback_alarm = alarm_cb_sleep,
+
+    .next = NULL,
+};
+
+uint8_t flag_is_sleeping = 0;
+extern struct gc9a01_stu myLCD;
 
 extern uint16_t picture_buffer[240*240];
 uint32_t pic_buf_pack_counter[59]; // 240*240*2/61/32
@@ -65,6 +81,9 @@ int myAPP_usb_init(struct ltx_App_stu *app){
     ltx_Task_init(&task_usb_get, app);
 
     pack_counter_reset();
+
+    ltx_Alarm_set_count(&alarm_sleep, SLEEP_TICKS_COUNT);
+    ltx_Alarm_add(&alarm_sleep);
 
     return 0;
 }
@@ -154,12 +173,14 @@ void task_func_usb_get(void *param){
                     case '0': // 暂停播放
                         ltx_Topic_publish(&topic_player_pause);
                         disp_pic_rotate(0);
+                        _usb_get_up();
 
                         break;
 
                     case '1': // 继续播放
                         ltx_Topic_publish(&topic_player_resume);
                         disp_pic_rotate(1);
+                        _usb_get_up();
 
                         break;
                         
@@ -287,7 +308,32 @@ void task_func_usb_get(void *param){
     }
 }
 
+// 休眠闹钟
+void alarm_cb_sleep(void *param){
+    flag_is_sleeping = 1;
+
+    // 关闭图片旋转
+    disp_pic_rotate(0);
+    // 关闭背光
+    myLCD.set_backlight(0);
+}
+
+// 唤醒下位机
+void _usb_get_up(void){
+    ltx_Alarm_set_count(&alarm_sleep, SLEEP_TICKS_COUNT);
+    if(flag_is_sleeping){
+        ltx_Alarm_add(&alarm_sleep);
+        myLCD.set_backlight(100);
+    }
+    flag_is_sleeping = 0;
+}
+
+
 void send_str_2_usb(uint8_t *str, uint8_t len){
+    if(flag_is_sleeping){
+        return ;
+    }
+
     if(cdc_struct.g_tx_completed){
         cdc_struct.g_tx_completed = 0;
         uint8_t i;
