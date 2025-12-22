@@ -579,14 +579,13 @@ void disp_pic_down(void){
 
 void disp_pic_rotate(uint8_t on_off){
 
+    ltx_Script_pause(&script_pic_rotate_sub);
     ltx_Script_pause(&script_pic_rotate);
     if(on_off){
         HAL_SPI_DMAStop(&spi1_handler);
         ltx_Script_pause(&script_pic_down);
         ltx_Script_init(&script_pic_rotate, script_cb_pic_rotate, SC_TYPE_RUN_DELAY, 0, NULL);
         ltx_Script_resume(&script_pic_rotate);
-    }else {
-        ltx_Script_pause(&script_pic_rotate_sub);
     }
 }
 
