@@ -34,7 +34,8 @@ uint8_t myTonearm_read_pin(void);
 void myTonearm_set_duty_a(uint8_t duty);
 void myTonearm_set_duty_b(uint8_t duty);
 // 唱臂初始化脚本回调
-void script_cb_tonearm_init(struct ltx_Script_stu *script);
+void script_cb_tonearm_init1(struct ltx_Script_stu *script);
+void script_cb_tonearm_init2(struct ltx_Script_stu *script);
 
 
 // 外部硬件初始化完成事件组回调
@@ -90,7 +91,7 @@ int myAPP_device_init_init(struct ltx_App_stu *app){
     }
 
     // 创建唱臂初始脚本
-    if(ltx_Script_init(&script_tonearm_init, script_cb_tonearm_init, SC_TYPE_RUN_DELAY, 0, NULL)){
+    if(ltx_Script_init(&script_tonearm_init, script_cb_tonearm_init2, SC_TYPE_RUN_DELAY, 0, NULL)){
         _SYS_ERROR(0xFFFF, "Tonearm init script create Failed!");
 
         return -1;
@@ -305,8 +306,8 @@ void myLCD_write_rst(uint8_t pin_level){
 
 void myLCD_set_backlight(uint8_t level){
     level = (level > 100) ? 100 : level;
-    tmr_channel_value_set(TMR3, TMR_SELECT_CHANNEL_4, level * 10);
-    LOG_FMT(PRINT_DEBUG"Set backlight to %d\n", level);
+    tmr_channel_value_set(TMR3, TMR_SELECT_CHANNEL_4, level * 10  + (level?1:0));
+    // LOG_FMT(PRINT_DEBUG"Set backlight to %d\n", level);
 }
 
 void myLCD_transmit_data(const uint8_t *buf, uint16_t len){
@@ -330,8 +331,8 @@ void myLCD_pin_init(void){
 }
 
 
-// 唱臂初始化脚本回调
-void script_cb_tonearm_init(struct ltx_Script_stu *script){
+// 唱臂初始化脚本回调1，驱动力渐变版本
+void script_cb_tonearm_init1(struct ltx_Script_stu *script){
     static uint8_t try_times = 0; // 尝试次数
     static uint8_t wait_stable_count = 0; // 等待唱针位置平稳次数
     static uint8_t last_stylus_status = 0;
@@ -350,7 +351,7 @@ void script_cb_tonearm_init(struct ltx_Script_stu *script){
             tonearm_detect(&myTonearm);
             last_stylus_status = tonearm_get_status(&myTonearm);
 
-            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 50, NULL);
+            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 200, NULL);
 
             break;
 
@@ -418,7 +419,7 @@ void script_cb_tonearm_init(struct ltx_Script_stu *script){
                     ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 20, NULL);
                 }
             }else if(try_times){ // 驱动力已拉满，但是没超过等待时间，等待一下，避免抖动
-                ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 390, NULL);
+                ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 500, NULL);
             }else { // 驱动力未拉满，每毫秒增加百分之一的推力
                 ltx_Script_set_next_step(script, 4, SC_TYPE_RUN_DELAY, 1, NULL);
             }
@@ -461,17 +462,139 @@ void script_cb_tonearm_init(struct ltx_Script_stu *script){
     }
 }
 
+// 唱臂初始化脚本回调2，驱动力直接拉满版本
+void script_cb_tonearm_init2(struct ltx_Script_stu *script){
+    static uint8_t try_times = 0; // 尝试次数
+    static uint8_t wait_stable_count = 0; // 等待唱针位置平稳次数
+    static uint8_t last_stylus_status = 0;
+
+    switch(script->step_now){
+        case 1: // 初始化变量
+            try_times = 0;
+            wait_stable_count = 0;
+            // 关闭 pwm 输出
+            tonearm_leave(&myTonearm, 0);
+            // 检测唱针位置
+            tonearm_detect(&myTonearm);
+            last_stylus_status = tonearm_get_status(&myTonearm);
+
+            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 200, NULL);
+
+            break;
+
+        case 2: // 检测唱针位置，等待稳定
+            tonearm_detect(&myTonearm);
+            if(last_stylus_status != tonearm_get_status(&myTonearm)){ // 唱针位置有变化
+                wait_stable_count = 0;
+                try_times ++;
+                last_stylus_status = tonearm_get_status(&myTonearm);
+            }else { // 唱针位置没变化
+                wait_stable_count ++;
+            }
+
+            if(wait_stable_count > 5){ // 连续五次采样都没位置变化，认为稳定，进入唱臂驱动类型判断
+                ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 0, NULL);
+
+            }else if(try_times > 10){ // 超过十次抖动
+                LOG_STR(PRINT_ERROR"Tonearm init Failed!\n");
+                _SYS_ERROR(SYS_ERROR_TONEARM | SYS_ERROR_TONEARM_INIT, "Stylus status not stable!");
+            }else { // 50ms 后继续判断
+                ltx_Script_set_next_step(script, script->step_now, SC_TYPE_RUN_DELAY, 50, NULL);
+            }
+
+            break;
+
+        case 3: // 初始化变量
+            try_times = 0;
+
+            if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_CLOSE){
+                tonearm_leave(&myTonearm, 100);
+            }else {
+                tonearm_close(&myTonearm, 100);
+            }
+
+            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 200, NULL);
+
+            break;
+            
+        case 4:
+            tonearm_detect(&myTonearm);
+            if(last_stylus_status != tonearm_get_status(&myTonearm)){ // 唱针位置有变化
+                tonearm_leave(&myTonearm, 0);
+                // 初始化完成
+                LOG_FMT(PRINT_LOG"Tonearm init okay at %dms\n", ltx_Sys_get_tick());
+                // 发布唱臂初始化完成事件
+                ltx_Event_publish(&event_device_init_over, EVENT_INIT_TONEARM_OVER);
+                // 结束脚本
+                ltx_Script_set_next_step(script, 0, SC_TYPE_OVER, 0, NULL);
+
+            }else { // 唱针位置没变化
+                if(++ try_times > 16){ // 超过 600ms 没发生变化
+                    try_times = 0;
+                    tonearm_leave(&myTonearm, 0);
+                    myTonearm.type = TONEARM_DT_B; // 反转驱动类型
+                    ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 150, NULL); // 歇 150ms
+                }else {
+                    ltx_Script_set_next_step(script, script->step_now, SC_TYPE_RUN_DELAY, 50, NULL);
+                }
+            }
+
+            break;
+
+        case 5:
+
+            if(tonearm_get_status(&myTonearm) == TONEARM_STATUS_CLOSE){
+                tonearm_leave(&myTonearm, 100);
+            }else {
+                tonearm_close(&myTonearm, 100);
+            }
+
+            ltx_Script_set_next_step(script, script->step_now + 1, SC_TYPE_RUN_DELAY, 200, NULL);
+            break;
+            
+        case 6:
+            tonearm_detect(&myTonearm);
+            if(last_stylus_status != tonearm_get_status(&myTonearm)){ // 唱针位置有变化
+                tonearm_leave(&myTonearm, 0);
+                // 初始化完成
+                LOG_FMT(PRINT_LOG"Tonearm init okay at %dms\n", ltx_Sys_get_tick());
+                // 发布唱臂初始化完成事件
+                ltx_Event_publish(&event_device_init_over, EVENT_INIT_TONEARM_OVER);
+                // 结束脚本
+                ltx_Script_set_next_step(script, 0, SC_TYPE_OVER, 0, NULL);
+
+            }else { // 唱针位置没变化
+                if(++ try_times > 16){ // 超过 800ms 没发生变化
+                    tonearm_leave(&myTonearm, 0);
+                    // 发布错误
+                    LOG_STR(PRINT_ERROR"Tonearm init Failed!\n");
+                    _SYS_ERROR(SYS_ERROR_TONEARM | SYS_ERROR_TONEARM_INIT, "Can not drive tonearm!");
+                    // 结束脚本
+                    ltx_Script_set_next_step(script, 0, SC_TYPE_OVER, 0, NULL);
+                }else {
+                    ltx_Script_set_next_step(script, script->step_now, SC_TYPE_RUN_DELAY, 50, NULL);
+                }
+            }
+
+            break;
+
+        default:
+
+            break;
+    }
+}
+
 // 唱臂回调
 uint8_t myTonearm_read_pin(void){
     return gpio_input_data_bit_read(GPIOA, GPIO_PINS_1);
 }
 
 void myTonearm_set_duty_a(uint8_t duty){
-    tmr_channel_value_set(TMR2, TMR_SELECT_CHANNEL_3, duty*10);
+    tmr_channel_value_set(TMR2, TMR_SELECT_CHANNEL_3, duty*10 + (duty?1:0));
 }
 
 void myTonearm_set_duty_b(uint8_t duty){
-    tmr_channel_value_set(TMR2, TMR_SELECT_CHANNEL_4, duty*10);
+    tmr_channel_value_set(TMR2, TMR_SELECT_CHANNEL_4, duty*10 + (duty?1:0));
 }
 
 

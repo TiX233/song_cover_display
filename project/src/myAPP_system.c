@@ -153,8 +153,17 @@ void subscriber_cb_sys_error(void *param){
     // 蓝屏显示错误码
     extern struct gc9a01_stu myLCD;
     if(myLCD.is_initialized){
-        gc9a01_clear(&myLCD, RGB565_BLUE);
-        // todo
+		// gc9a01_clear(&myLCD, RGB565_BLUE);
+        HAL_SPI_DMAStop(&spi1_handler);
+		uint8_t _color[2];
+		_color[1] = RGB565_BLUE & 0xFF;
+		_color[0] = RGB565_BLUE >> 8;
+		gc9a01_set_window(&myLCD, 0, 0, 239, 239);
+		myLCD.write_dc(GC9A01_PIN_LEVEL_DC_DATA);
+		for(uint32_t i = 0; i < 240*240; i ++)
+			myLCD.transmit_data(_color, 2);
+		
+        // 错误码 todo
     }
 }
 
